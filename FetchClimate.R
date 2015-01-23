@@ -2,12 +2,14 @@
 
 library(RCurl)
 library(RJSONIO)
+library(sp)
 
-internal_fc.formPointsRequestBody <- function(envVar, # must be private
+internal_fc.formRequestBody <- function(envVar, # must be private
                                               lat,lon,
                                               years,
                                               days,
-                                              hours) {
+                                              hours,
+                                              spatialRegionType) {
   ## JSON request object. 
   ## The text may be downloaded from http://fetchclimate2.cloudapp.net/form
   
@@ -33,7 +35,7 @@ internal_fc.formPointsRequestBody <- function(envVar, # must be private
     Lons2=NULL,
     TimeRegion=timeRegion,
     Mask=NULL,
-    SpatialRegionType="Points"
+    SpatialRegionType=spatialRegionType
   )    
   
   request <- list(
@@ -44,6 +46,25 @@ internal_fc.formPointsRequestBody <- function(envVar, # must be private
   j <- toJSON(request)
   #print(j)
   return(j)
+}
+
+internal_fc.reformGridResponse <- function(resultList,lats,lons) {#must be private. accepts the decoded JSON recieved from FC result proxy. converts it into matrix
+  lonN <- length(lons)
+  latN <- length(lats)  
+  stratched_lats <- c()
+  stratched_lons <- c()
+  stratched_values <- c()
+  for(i in 1:lonN) {
+    stratched_lons <- c(stratched_lons,rep(lons[i],times=latN))
+    stratched_lats <- c(stratched_lats,lats)
+    stratched_values <- c(stratched_values,resultList$values[[i]])
+  }
+  resultdf <- data.frame(lon=stratched_lons,lat=stratched_lats,value=stratched_values)
+  coordinates(resultdf) <- c("lon","lat") #promote to SpatialPointsDataFrame
+  proj4string(resultdf) <- CRS("+proj=longlat")
+  gridded(resultdf) <- TRUE # promote to SpatialPixelsDataFrame
+  resultdf <- as(resultdf, "SpatialGridDataFrame") # promote to SpatialGridDataFrame. creates the full grid
+  return(resultdf)
 }
 
 internal_fc.reformPointsTimeseries <- function(resultList) { #must be private. accepts the decoded JSON recieved from FC result proxy. converts it into matrix
@@ -65,11 +86,12 @@ internal_fc.TimeSeries <-function(envVar, #must be private
   if(length(lon) != N) {
     stop("lon and lat must be the same length");
   }  
-  json <- internal_fc.formPointsRequestBody(envVar,
+  json <- internal_fc.formRequestBody(envVar,
                                             lat,lon,
                                             years,
                                             days,
-                                            hours);
+                                            hours,
+                                            spatialRegionType="Points");
   result <- internal_fc.fetchCore(json,url)
   resultMatrix <- internal_fc.reformPointsTimeseries(result)
   return(resultMatrix)
@@ -190,6 +212,30 @@ fcTimeSeriesHourly<-function(
   return(resultMatrix)
 }
 
+fcGrid <- function(
+  variable,
+  latitudeFrom,latitudeTo,latitudeBy,
+  longitudeFrom,longitudeTo,longitudeBy,  
+  firstYear=1961,lastYear=1990,
+  firstDay=1,lastDay=365,
+  startHour=0,stopHour=24,
+  url="http://fetchclimate2.cloudapp.net/") {
+  
+  lats <- seq(from=latitudeFrom,to=latitudeTo,by=latitudeBy)
+  lons <- seq(from=longitudeFrom,to=longitudeTo,by=longitudeBy)
+  
+  years <- c(firstYear,lastYear+1)
+  days <- c(firstDay,lastDay+1)
+  hours <- c(startHour,stopHour)
+  
+  requestBody <- internal_fc.formRequestBody(variable,
+      lats,lons,
+      years,days,hours,
+      "PointGrid")
+  response <- internal_fc.fetchCore(requestBody,url)
+  resMatrix <- internal_fc.reformGridResponse(response,lats,lons)
+  return(resMatrix);
+}
 
 test.fc <-function() { #run automatic tests
   #declaring tests
@@ -214,7 +260,7 @@ test.fc <-function() { #run automatic tests
     print(paste("Running test",i," out of",length(tests)))
     tests[[i]]();
   }
-  print("All tests finished")
+  print("All tests finished. Ready to use")
 }
 
 test.fc()
