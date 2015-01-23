@@ -54,16 +54,22 @@ internal_fc.reformGridResponse <- function(resultList,lats,lons) {#must be priva
   stratched_lats <- c()
   stratched_lons <- c()
   stratched_values <- c()
+  
+  nullToNA <- function(x) {
+    x[sapply(x, is.null)] <- NA
+    return(x)
+  }
+  
   for(i in 1:lonN) {
     stratched_lons <- c(stratched_lons,rep(lons[i],times=latN))
     stratched_lats <- c(stratched_lats,lats)
-    stratched_values <- c(stratched_values,resultList$values[[i]])
+    stratched_values <- c(stratched_values,nullToNA(resultList$values[[i]])) #null is MV. replacew with NA
   }
-  resultdf <- data.frame(lon=stratched_lons,lat=stratched_lats,value=stratched_values)
+  resultdf <- data.frame(lon=stratched_lons,lat=stratched_lats,value=unlist(stratched_values))
   coordinates(resultdf) <- c("lon","lat") #promote to SpatialPointsDataFrame
   proj4string(resultdf) <- CRS("+proj=longlat")
   gridded(resultdf) <- TRUE # promote to SpatialPixelsDataFrame
-  resultdf <- as(resultdf, "SpatialGridDataFrame") # promote to SpatialGridDataFrame. creates the full grid
+  #resultdf <- as(resultdf, "SpatialGridDataFrame") # promote to SpatialGridDataFrame. creates the full grid
   return(resultdf)
 }
 
@@ -124,6 +130,7 @@ internal_fc.fetchCore <- function(jsonRequest,url) {
   result <- c()
   
   ## get result data
+  print("Receiving data...")
   if (substr(reply,1,9)=='completed') {
     msds = substr(reply,11,nchar(reply))
     h$reset()
@@ -247,12 +254,16 @@ test.fc <-function() { #run automatic tests
   tests <- c(tests,function()
   {# test fcTimeSeriesDaily , lots of points
     data(quakes) #the only built-in dataset with locations which I’ve found. The Fiji earthquakes
-    ts <- fcTimeSeriesDaily( #fetching day-to-day temperature variations at earthquake locations
+    fcTimeSeriesDaily( #fetching day-to-day temperature variations at earthquake locations
       "airt", 
       quakes$lat, quakes$long,
       firstYear=1981, lastYear=2000 #averaging across 20 years
     )  
-  })  
+  })
+  tests <- c(tests,function()
+  {# test fcGrid 
+    a<- fcGrid("airt",40,80,10,10,200,10,firstYear=1950,lastYear=2000,firstDay=1,lastDay=31)
+  })
   
   #running tests
   print("Running automatic tests")
