@@ -1,7 +1,7 @@
 #git repo at ssh://home.dgrechka.net/data/git/Rfc.git
 
 library(RCurl)
-library(rjson)
+library(RJSONIO)
 
 internal_fc.formPointsRequestBody <- function(envVar, # must be private
                                   lat,lon,
@@ -20,6 +20,11 @@ internal_fc.formPointsRequestBody <- function(envVar, # must be private
     IsIntervalsGridHours=T
   )
   
+  if(length(lat) == 1)
+  {
+    lat <- I(lat)
+    lon <- I(lon)
+  }
   
   domain <- list(
     Lats=lat,
