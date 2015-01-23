@@ -4,10 +4,10 @@ library(RCurl)
 library(RJSONIO)
 
 internal_fc.formPointsRequestBody <- function(envVar, # must be private
-                                  lat,lon,
-                                  years,
-                                  days,
-                                  hours) {
+                                              lat,lon,
+                                              years,
+                                              days,
+                                              hours) {
   ## JSON request object. 
   ## The text may be downloaded from http://fetchclimate2.cloudapp.net/form
   
@@ -56,20 +56,20 @@ internal_fc.reformPointsTimeseries <- function(resultList) { #must be private. a
 }
 
 internal_fc.TimeSeries <-function(envVar, #must be private
-                        lat,lon,
-                        years,
-                        days,
-                        hours,
-                        url) {
+                                  lat,lon,
+                                  years,
+                                  days,
+                                  hours,
+                                  url) {
   N <- length(lat)
   if(length(lon) != N) {
     stop("lon and lat must be the same length");
   }  
   json <- internal_fc.formPointsRequestBody(envVar,
-                                lat,lon,
-                                years,
-                                days,
-                                hours);
+                                            lat,lon,
+                                            years,
+                                            days,
+                                            hours);
   result <- internal_fc.fetchCore(json,url)
   resultMatrix <- internal_fc.reformPointsTimeseries(result)
   return(resultMatrix)
@@ -116,8 +116,8 @@ internal_fc.fetchCore <- function(jsonRequest,url) {
 
 
 fcTimeSeriesYearly<-function(
-  envVar,
-  lat,lon,
+  variable,
+  latitude,longitude,
   firstYear,lastYear,
   firstDay=1,lastDay=365,
   startHour=0,stopHour=24,
@@ -133,7 +133,7 @@ fcTimeSeriesYearly<-function(
   days <- c(firstDay,lastDay+1)
   hours <- c(startHour,stopHour)
   
-  resultMatrix <-internal_fc.TimeSeries(envVar,lat,lon,years,days,hours,url)
+  resultMatrix <-internal_fc.TimeSeries(variable,latitude,longitude,years,days,hours,url)
   
   colnames(resultMatrix) <- years[1:(length(years)-1)]
   
@@ -141,8 +141,8 @@ fcTimeSeriesYearly<-function(
 }
 
 fcTimeSeriesDaily<-function(
-  envVar,
-  lat,lon,
+  variable,
+  latitude,longitude,
   firstDay=1,lastDay=365,
   firstYear=1961,lastYear=1990,
   startHour=0,stopHour=24,
@@ -158,7 +158,7 @@ fcTimeSeriesDaily<-function(
   days <- seq(from=firstDay,to=lastDay+1,by=1)
   hours <- c(startHour,stopHour)
   
-  resultMatrix <-internal_fc.TimeSeries(envVar,lat,lon,years,days,hours,url)
+  resultMatrix <-internal_fc.TimeSeries(variable,latitude,longitude,years,days,hours,url)
   
   colnames(resultMatrix) <- days[1:(length(days)-1)]
   
@@ -166,8 +166,8 @@ fcTimeSeriesDaily<-function(
 }
 
 fcTimeSeriesHourly<-function(
-  envVar,
-  lat,lon,
+  variable,
+  latitude,longitude,
   startHour,stopHour,
   firstYear=1961,lastYear=1990,
   firstDay=1,lastDay=365,
@@ -183,7 +183,7 @@ fcTimeSeriesHourly<-function(
   days <- c(firstDay,lastDay+1)
   hours <- seq(from=startHour,to=stopHour+1)
   
-  resultMatrix <-internal_fc.TimeSeries(envVar,lat,lon,years,days,hours,url)
+  resultMatrix <-internal_fc.TimeSeries(variable,latitude,longitude,years,days,hours,url)
   
   colnames(resultMatrix) <- hours[1:(length(hours))]
   
@@ -323,3 +323,31 @@ fetchclimate <- function( #returns a column to be put to the dataframe
   
   return(result)
 }
+
+test.fc <-function() { #run automatic tests
+  #declaring tests
+  tests <- c()
+  tests <- c(tests,function()
+  {# test fcTimeSeriesYearly ,single point
+    fcTimeSeriesYearly(variable="airt",latitude=75.0, longitude=57.7,firstYear=1950,lastYear=2000)
+  })
+  tests <- c(tests,function()
+  {# test fcTimeSeriesDaily , lots of points
+    data(quakes) #the only built-in dataset with locations which I’ve found. The Fiji earthquakes
+    ts <- fcTimeSeriesDaily( #fetching day-to-day temperature variations at earthquake locations
+      "airt", 
+      quakes$lat, quakes$long,
+      firstYear=1981, lastYear=2000 #averaging across 20 years
+    )  
+  })  
+  
+  #running tests
+  print("Running automatic tests")
+  for(i in 1:length(tests)){
+    print(paste("Running test",i," out of",length(tests)))
+    tests[[i]]();
+  }
+  print("All tests finished")
+}
+
+test.fc()
