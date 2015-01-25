@@ -1,4 +1,4 @@
-#git repo at ssh://home.dgrechka.net/data/git/Rfc.git
+#git repo at https://github.com/dgrechka/Rfc
 
 library(RCurl)
 library(RJSONIO)
