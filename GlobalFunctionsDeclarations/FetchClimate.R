@@ -75,11 +75,17 @@ internal_fc.reformGridResponse <- function(resultList,lats,lons) {#must be priva
 
 internal_fc.reformPointsTimeseries <- function(resultList) { #must be private. accepts the decoded JSON recieved from FC result proxy. converts it into matrix
   N <- length(resultList$values)
-  res <- matrix(ncol=length(resultList$values[[1]]),nrow=N)
+  M <- length(resultList$values[[1]])
+  resV <- matrix(ncol=M,nrow=N)
+  resU <- matrix(ncol=M,nrow=N)
+  resP <- matrix(ncol=M,nrow=N)
+  
   for(i in 1:N) {
-    res[i,] = resultList$values[[i]]
+    resV[i,] = resultList$values[[i]]
+    resU[i,] = resultList$sd[[i]]
+    resP[i,] = resultList$provenance[[i]]
   }
-  return(res)
+  return(list(values=resV,sd=resU,provenance=resP))
 }
 
 internal_fc.TimeSeries <-function(envVar, #must be private
@@ -134,7 +140,7 @@ internal_fc.fetchCore <- function(jsonRequest,url) {
   if (substr(reply,1,9)=='completed') {
     msds = substr(reply,11,nchar(reply))
     h$reset()
-    curlPerform(url = paste(url,"/jsproxy/data?uri=",curlEscape(msds),"&variables=values",sep=""),
+    curlPerform(url = paste(url,"/jsproxy/data?uri=",curlEscape(msds),"&variables=values,provenance,sd",sep=""),
                 httpheader=c(Accept="application/json"),
                 writefunction = h$update)
     #print(h$value())
@@ -155,7 +161,7 @@ fcTimeSeriesYearly<-function(
   #lat,lon are vectors with the same length (can be length of 1).
   #firstYear,lastYear are scalars
   
-  #return matrix NxM. N = length(lat), M = timeseries length
+  #return a list with NxM matrices (values,sd,provenance). N = length(lat), M = timeseries length
   
   
   years <- seq(from=firstYear,to=lastYear+1,by=1)
@@ -164,7 +170,7 @@ fcTimeSeriesYearly<-function(
   
   resultMatrix <-internal_fc.TimeSeries(variable,latitude,longitude,years,days,hours,url)
   
-  colnames(resultMatrix) <- years[1:(length(years)-1)]
+  resultMatrix$years <- years[1:(length(years)-1)]
   
   return(resultMatrix)
 }
@@ -180,7 +186,7 @@ fcTimeSeriesDaily<-function(
   #lat,lon are vectors with the same length (can be length of 1).  
   #firstDay,lastDay are scalars
   
-  #return matrix NxM. N = length(lat), M = timeseries length
+  #return a list with NxM matrices (values,sd,provenance). N = length(lat), M = timeseries length
   
   
   years <- c(firstYear,lastYear+1)
@@ -189,7 +195,7 @@ fcTimeSeriesDaily<-function(
   
   resultMatrix <-internal_fc.TimeSeries(variable,latitude,longitude,years,days,hours,url)
   
-  colnames(resultMatrix) <- days[1:(length(days)-1)]
+  resultMatrix$days <- days[1:(length(days)-1)]
   
   return(resultMatrix)
 }
@@ -205,16 +211,16 @@ fcTimeSeriesHourly<-function(
   #lat,lon are vectors with the same length (can be length of 1).
   #startHour,stopHour are scalars
   
-  #return matrix NxM. N = length(lat), M = timeseries length
+  #return a list with NxM matrices (values,sd,provenance). N = length(lat), M = timeseries length
   
   
   years <- c(firstYear,lastYear+1)
   days <- c(firstDay,lastDay+1)
-  hours <- seq(from=startHour,to=stopHour+1)
+  hours <- seq(from=startHour,to=stopHour)
   
   resultMatrix <-internal_fc.TimeSeries(variable,latitude,longitude,years,days,hours,url)
   
-  colnames(resultMatrix) <- hours[1:(length(hours))]
+  resultMatrix$hours <- hours[1:(length(hours))]
   
   return(resultMatrix)
 }
@@ -249,7 +255,18 @@ test.fc <-function() { #run automatic tests
   tests <- c()
   tests <- c(tests,function()
   {# test fcTimeSeriesYearly ,single point
-    fcTimeSeriesYearly(variable="airt",latitude=75.0, longitude=57.7,firstYear=1950,lastYear=2000)
+    a <- fcTimeSeriesYearly(variable="airt",latitude=75.0, longitude=57.7,firstYear=1950,lastYear=2000)
+    if(ncol(a$values)!=51) stop(paste("wrong time series length. expected 51 but got",ncol(a$values)))
+  })
+  tests <- c(tests,function()
+  {# test fcTimeSeriesDayly ,single point
+    a<-fcTimeSeriesDaily(variable="airt",latitude=75.0, longitude=57.7,firstYear=1950,lastYear=2000)
+    if(ncol(a$values)!=365) stop(paste("wrong time series length. expected 365 but got",ncol(a$values)))
+  })
+  tests <- c(tests,function()
+  {# test fcTimeSeriesHourly ,single point
+    a<-fcTimeSeriesHourly(variable="airt",latitude=75.0, longitude=57.7,firstYear=1950,lastYear=2000,startHour=0,stopHour=24)
+    if(ncol(a$values)!=24) stop(paste("wrong time series length. expected 24 but got",ncol(a$values)))
   })
   tests <- c(tests,function()
   {# test fcTimeSeriesDaily , lots of points
@@ -268,7 +285,7 @@ test.fc <-function() { #run automatic tests
   #running tests
   print("Running automatic tests")
   for(i in 1:length(tests)){
-    print(paste("Running test",i," out of",length(tests)))
+    print(paste("Running test",i,"out of",length(tests)))
     tests[[i]]();
   }
   print("All tests finished. Ready to use")
