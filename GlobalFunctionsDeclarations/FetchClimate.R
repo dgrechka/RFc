@@ -48,12 +48,34 @@ internal_fc.formRequestBody <- function(envVar, # must be private
   return(j)
 }
 
+internal_fc.getConfiguration<-function(url) {
+  h = basicTextGatherer()
+  h$reset()
+  curlPerform(url = paste(url,"/api/configuration",sep=''),
+              httpheader=c(Accept="text/plain", 'Content-Type' = "application/json"),              
+              writefunction = h$update)
+  reply = h$value()
+  result=fromJSON(h$value())
+  return(result)
+}
+
+internal_fc.replaceProvIDwithNames <- function(values,configuration) {
+  replaced <- values;
+  for(i in 1:length(configuration$DataSources)) {
+    current <- configuration$DataSources[[i]]    
+    replaced[values==current$ID]<-current$Name
+  }
+  return(factor(replaced))
+}
+
 internal_fc.reformGridResponse <- function(resultList,lats,lons) {#must be private. accepts the decoded JSON recieved from FC result proxy. converts it into matrix
   lonN <- length(lons)
   latN <- length(lats)  
   stratched_lats <- c()
   stratched_lons <- c()
   stratched_values <- c()
+  stratched_sd <- c()
+  stratched_provenance <- c()
   
   nullToNA <- function(x) {
     x[sapply(x, is.null)] <- NA
@@ -64,11 +86,17 @@ internal_fc.reformGridResponse <- function(resultList,lats,lons) {#must be priva
     stratched_lons <- c(stratched_lons,rep(lons[i],times=latN))
     stratched_lats <- c(stratched_lats,lats)
     stratched_values <- c(stratched_values,nullToNA(resultList$values[[i]])) #null is MV. replacew with NA
+    stratched_sd <- c(stratched_sd,nullToNA(resultList$sd[[i]])) #null is MV. replacew with NA
+    stratched_provenance <- c(stratched_provenance,nullToNA(resultList$provenance[[i]])) #null is MV. replacew with NA
   }
-  resultdf <- data.frame(lon=stratched_lons,lat=stratched_lats,value=unlist(stratched_values))
+  resultdf <- data.frame(lon=stratched_lons,lat=stratched_lats,
+                         values=unlist(stratched_values),
+                         sd=unlist(stratched_sd),
+                         provenance=unlist(stratched_provenance))
   coordinates(resultdf) <- c("lon","lat") #promote to SpatialPointsDataFrame
   proj4string(resultdf) <- CRS("+proj=longlat")
   gridded(resultdf) <- TRUE # promote to SpatialPixelsDataFrame
+  
   #resultdf <- as(resultdf, "SpatialGridDataFrame") # promote to SpatialGridDataFrame. creates the full grid
   return(resultdf)
 }
@@ -106,6 +134,10 @@ internal_fc.TimeSeries <-function(envVar, #must be private
                                             spatialRegionType="Points");
   result <- internal_fc.fetchCore(json,url)
   resultMatrix <- internal_fc.reformPointsTimeseries(result)
+  
+  conf <- internal_fc.getConfiguration(url)
+  resultMatrix$provenance <- internal_fc.replaceProvIDwithNames(resultMatrix$provenance,conf)
+  
   return(resultMatrix)
 }
 
@@ -246,8 +278,12 @@ fcGrid <- function(
       years,days,hours,
       "PointGrid")
   response <- internal_fc.fetchCore(requestBody,url)
-  resMatrix <- internal_fc.reformGridResponse(response,lats,lons)
-  return(resMatrix);
+  spObj <- internal_fc.reformGridResponse(response,lats,lons)  
+  
+  conf <- internal_fc.getConfiguration(url)
+  spObj$provenance <- internal_fc.replaceProvIDwithNames(spObj$provenance,conf)
+  
+  return(spObj);
 }
 
 test.fc <-function() { #run automatic tests
