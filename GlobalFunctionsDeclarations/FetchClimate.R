@@ -1,15 +1,15 @@
 #git repo at https://github.com/dgrechka/Rfc
 
-library(RCurl)
-library(RJSONIO)
-library(sp)
+require(RCurl)
+require(RJSONIO)
+require(sp)
 
 internal_fc.formRequestBody <- function(envVar, # must be private
                                               lat,lon,
                                               years,
                                               days,
                                               hours,
-                                              spatialRegionType) {
+                                              spatialRegionType,dataSources) {
   ## JSON request object. 
   ## The text may be downloaded from http://fetchclimate2.cloudapp.net/form
   
@@ -38,9 +38,18 @@ internal_fc.formRequestBody <- function(envVar, # must be private
     SpatialRegionType=spatialRegionType
   )    
   
+  if(length(dataSources)==1) {
+    if(dataSources=="ANY") {
+      dataSources <- "";# any availalbe
+    }
+    else {
+      dataSources <- I(dataSources)
+    }
+  }  
+  
   request <- list(
     EnvironmentVariableName=envVar,
-    ParticularDataSources="", # any availalbe
+    ParticularDataSources=dataSources, 
     Domain=domain
   )
   j <- toJSON(request)
@@ -59,6 +68,14 @@ internal_fc.getConfiguration<-function(url) {
   return(result)
 }
 
+internal_fc.getProvID <- function(configuration,dataSourceName) {
+  for(i in 1:length(configuration$DataSources)) {
+    if(configuration$DataSources[[i]]$Name==dataSourceName){
+       return(configuration$DataSources[[i]]$ID);
+    }    
+  }
+}
+
 internal_fc.replaceProvIDwithNames <- function(values,configuration) {
   replaced <- values;
   for(i in 1:length(configuration$DataSources)) {
@@ -68,14 +85,14 @@ internal_fc.replaceProvIDwithNames <- function(values,configuration) {
   return(factor(replaced))
 }
 
-internal_fc.reformGridResponse <- function(resultList,lats,lons) {#must be private. accepts the decoded JSON recieved from FC result proxy. converts it into matrix
+internal_fc.reformGridResponse <- function(resultList,lats,lons,explicitProvenance=NULL) {#must be private. accepts the decoded JSON recieved from FC result proxy. converts it into matrix
   lonN <- length(lons)
   latN <- length(lats)  
   stratched_lats <- c()
   stratched_lons <- c()
   stratched_values <- c()
   stratched_sd <- c()
-  stratched_provenance <- c()
+  stratched_provenance<-c()  
   
   nullToNA <- function(x) {
     x[sapply(x, is.null)] <- NA
@@ -87,7 +104,12 @@ internal_fc.reformGridResponse <- function(resultList,lats,lons) {#must be priva
     stratched_lats <- c(stratched_lats,lats)
     stratched_values <- c(stratched_values,nullToNA(resultList$values[[i]])) #null is MV. replacew with NA
     stratched_sd <- c(stratched_sd,nullToNA(resultList$sd[[i]])) #null is MV. replacew with NA
-    stratched_provenance <- c(stratched_provenance,nullToNA(resultList$provenance[[i]])) #null is MV. replacew with NA
+    if(is.null(explicitProvenance)) {
+      stratched_provenance <- c(stratched_provenance,nullToNA(resultList$provenance[[i]])) #null is MV. replacew with NA
+    }
+  }
+  if(!is.null(explicitProvenance)) {
+    stratched_provenance <- rep(explicitProvenance,times=lonN*latN)
   }
   resultdf <- data.frame(lon=stratched_lons,lat=stratched_lats,
                          values=unlist(stratched_values),
@@ -101,17 +123,21 @@ internal_fc.reformGridResponse <- function(resultList,lats,lons) {#must be priva
   return(resultdf)
 }
 
-internal_fc.reformPointsTimeseries <- function(resultList) { #must be private. accepts the decoded JSON recieved from FC result proxy. converts it into matrix
+internal_fc.reformPointsTimeseries <- function(resultList,explicitProvenance) { #must be private. accepts the decoded JSON recieved from FC result proxy. converts it into matrix
   N <- length(resultList$values)
   M <- length(resultList$values[[1]])
   resV <- matrix(ncol=M,nrow=N)
   resU <- matrix(ncol=M,nrow=N)
   resP <- matrix(ncol=M,nrow=N)
+  if(!is.null(explicitProvenance)) {
+    resP <- matrix(rep(explicitProvenance,N*M),ncol=M,nrow=N)  
+  }  
   
   for(i in 1:N) {
     resV[i,] = resultList$values[[i]]
     resU[i,] = resultList$sd[[i]]
-    resP[i,] = resultList$provenance[[i]]
+    if(!is.null(explicitProvenance))
+      resP[i,] = resultList$provenance[[i]]
   }
   return(list(values=resV,sd=resU,provenance=resP))
 }
@@ -121,7 +147,7 @@ internal_fc.TimeSeries <-function(envVar, #must be private
                                   years,
                                   days,
                                   hours,
-                                  url) {
+                                  url,dataSources) {
   N <- length(lat)
   if(length(lon) != N) {
     stop("lon and lat must be the same length");
@@ -131,17 +157,26 @@ internal_fc.TimeSeries <-function(envVar, #must be private
                                             years,
                                             days,
                                             hours,
-                                            spatialRegionType="Points");
-  result <- internal_fc.fetchCore(json,url)
-  resultMatrix <- internal_fc.reformPointsTimeseries(result)
+                                            spatialRegionType="Points",
+                                            dataSources=dataSources);
+  requestProvenance <- length(dataSources)>1 || dataSources=="ANY"  
   
+  result <- internal_fc.fetchCore(json,url,requestProvenance)    
   conf <- internal_fc.getConfiguration(url)
+  explicitDs <- c()
+  if(requestProvenance){
+    explicitDs <- NULL
+  }
+  else {
+    explicitDs<-internal_fc.getProvID(conf,dataSources)
+  }
+  resultMatrix <- internal_fc.reformPointsTimeseries(result,explicitDs)
   resultMatrix$provenance <- internal_fc.replaceProvIDwithNames(resultMatrix$provenance,conf)
   
   return(resultMatrix)
 }
 
-internal_fc.fetchCore <- function(jsonRequest,url) {
+internal_fc.fetchCore <- function(jsonRequest,url,requestProvenance) {
   #print("requesting JSON")
   #print(jsonRequest)
   h = basicTextGatherer()
@@ -172,7 +207,14 @@ internal_fc.fetchCore <- function(jsonRequest,url) {
   if (substr(reply,1,9)=='completed') {
     msds = substr(reply,11,nchar(reply))
     h$reset()
-    curlPerform(url = paste(url,"/jsproxy/data?uri=",curlEscape(msds),"&variables=values,provenance,sd",sep=""),
+    end_str <- c()
+    if(requestProvenance) {
+      end_str <- "&variables=values,provenance,sd"
+    }
+    else {
+      end_str <- "&variables=values,sd"
+    }
+    curlPerform(url = paste(url,"/jsproxy/data?uri=",curlEscape(msds),end_str,sep=""),
                 httpheader=c(Accept="application/json"),
                 writefunction = h$update)
     #print(h$value())
@@ -188,7 +230,9 @@ fcTimeSeriesYearly<-function(
   firstYear,lastYear,
   firstDay=1,lastDay=365,
   startHour=0,stopHour=24,
-  url="http://fetchclimate2.cloudapp.net/") {
+  url="http://fetchclimate2.cloudapp.net/",
+  dataSources="ANY"
+  ) {
   #envVar is string
   #lat,lon are vectors with the same length (can be length of 1).
   #firstYear,lastYear are scalars
@@ -200,7 +244,7 @@ fcTimeSeriesYearly<-function(
   days <- c(firstDay,lastDay+1)
   hours <- c(startHour,stopHour)
   
-  resultMatrix <-internal_fc.TimeSeries(variable,latitude,longitude,years,days,hours,url)
+  resultMatrix <-internal_fc.TimeSeries(variable,latitude,longitude,years,days,hours,url,dataSources)
   
   resultMatrix$years <- years[1:(length(years)-1)]
   
@@ -213,7 +257,8 @@ fcTimeSeriesDaily<-function(
   firstDay=1,lastDay=365,
   firstYear=1961,lastYear=1990,
   startHour=0,stopHour=24,
-  url="http://fetchclimate2.cloudapp.net/") {
+  url="http://fetchclimate2.cloudapp.net/",
+  dataSources="ANY") {
   #envVar is string
   #lat,lon are vectors with the same length (can be length of 1).  
   #firstDay,lastDay are scalars
@@ -225,7 +270,7 @@ fcTimeSeriesDaily<-function(
   days <- seq(from=firstDay,to=lastDay+1,by=1)
   hours <- c(startHour,stopHour)
   
-  resultMatrix <-internal_fc.TimeSeries(variable,latitude,longitude,years,days,hours,url)
+  resultMatrix <-internal_fc.TimeSeries(variable,latitude,longitude,years,days,hours,url,dataSources)
   
   resultMatrix$days <- days[1:(length(days)-1)]
   
@@ -238,7 +283,8 @@ fcTimeSeriesHourly<-function(
   startHour,stopHour,
   firstYear=1961,lastYear=1990,
   firstDay=1,lastDay=365,
-  url="http://fetchclimate2.cloudapp.net/") {
+  url="http://fetchclimate2.cloudapp.net/",
+  dataSources="ANY") {
   #envVar is string
   #lat,lon are vectors with the same length (can be length of 1).
   #startHour,stopHour are scalars
@@ -250,7 +296,7 @@ fcTimeSeriesHourly<-function(
   days <- c(firstDay,lastDay+1)
   hours <- seq(from=startHour,to=stopHour)
   
-  resultMatrix <-internal_fc.TimeSeries(variable,latitude,longitude,years,days,hours,url)
+  resultMatrix <-internal_fc.TimeSeries(variable,latitude,longitude,years,days,hours,url,dataSources)
   
   resultMatrix$hours <- hours[1:(length(hours))]
   
@@ -264,7 +310,8 @@ fcGrid <- function(
   firstYear=1961,lastYear=1990,
   firstDay=1,lastDay=365,
   startHour=0,stopHour=24,
-  url="http://fetchclimate2.cloudapp.net/") {
+  url="http://fetchclimate2.cloudapp.net/",
+  dataSources="ANY") {
   
   lats <- seq(from=latitudeFrom,to=latitudeTo,by=latitudeBy)
   lons <- seq(from=longitudeFrom,to=longitudeTo,by=longitudeBy)
@@ -276,11 +323,20 @@ fcGrid <- function(
   requestBody <- internal_fc.formRequestBody(variable,
       lats,lons,
       years,days,hours,
-      "PointGrid")
-  response <- internal_fc.fetchCore(requestBody,url)
-  spObj <- internal_fc.reformGridResponse(response,lats,lons)  
-  
+      "PointGrid",dataSources)
+  requestProvenance <- length(dataSources)>1 || dataSources=="ANY"  
+  response <- internal_fc.fetchCore(requestBody,url,requestProvenance)
   conf <- internal_fc.getConfiguration(url)
+  explicitDs <- c()
+  if(requestProvenance){
+    explicitDs <- NULL
+  }
+  else {
+    explicitDs<-internal_fc.getProvID(conf,dataSources)
+  }
+  spObj <- internal_fc.reformGridResponse(response,lats,lons,explicitDs)  
+  
+  
   spObj$provenance <- internal_fc.replaceProvIDwithNames(spObj$provenance,conf)
   
   return(spObj);
@@ -317,6 +373,15 @@ test.fc <-function() { #run automatic tests
   {# test fcGrid 
     a<- fcGrid("airt",40,80,10,10,200,10,firstYear=1950,lastYear=2000,firstDay=1,lastDay=31)
   })
+  tests <- c(tests,function()
+  {# test fcGrid  with datasource override
+    a<- fcGrid("airt",40,80,10,10,200,10,firstYear=1950,lastYear=2000,firstDay=1,lastDay=31,dataSources=c("NCEP/NCAR Reanalysis 1 (regular grid)"))
+  })
+  tests <- c(tests,function()
+  {# test fcGrid  with datasource override 2
+    a<- fcGrid("airt",40,80,10,10,200,10,firstYear=1950,lastYear=2000,firstDay=1,lastDay=31,dataSources=c("NCEP/NCAR Reanalysis 1 (regular grid)","CRU CL 2.0"))
+  }
+  )
   
   #running tests
   print("Running automatic tests")
