@@ -76,6 +76,11 @@ internal_fc.getProvID <- function(configuration,dataSourceName) {
   }
 }
 
+internal_fc.nullToNA <- function(x) {
+  x[sapply(x, is.null)] <- NA
+  return(x)
+}
+
 internal_fc.replaceProvIDwithNames <- function(values,configuration) {
   replaced <- values;
   for(i in 1:length(configuration$DataSources)) {
@@ -92,20 +97,15 @@ internal_fc.reformGridResponse <- function(resultList,lats,lons,explicitProvenan
   stratched_lons <- c()
   stratched_values <- c()
   stratched_sd <- c()
-  stratched_provenance<-c()  
-  
-  nullToNA <- function(x) {
-    x[sapply(x, is.null)] <- NA
-    return(x)
-  }
+  stratched_provenance<-c()    
   
   for(i in 1:lonN) {
     stratched_lons <- c(stratched_lons,rep(lons[i],times=latN))
     stratched_lats <- c(stratched_lats,lats)
-    stratched_values <- c(stratched_values,nullToNA(resultList$values[[i]])) #null is MV. replacew with NA
-    stratched_sd <- c(stratched_sd,nullToNA(resultList$sd[[i]])) #null is MV. replacew with NA
+    stratched_values <- c(stratched_values,internal_fc.nullToNA(resultList$values[[i]])) #null is MV. replacew with NA
+    stratched_sd <- c(stratched_sd,internal_fc.nullToNA(resultList$sd[[i]])) #null is MV. replacew with NA
     if(is.null(explicitProvenance)) {
-      stratched_provenance <- c(stratched_provenance,nullToNA(resultList$provenance[[i]])) #null is MV. replacew with NA
+      stratched_provenance <- c(stratched_provenance,internal_fc.nullToNA(resultList$provenance[[i]])) #null is MV. replacew with NA
     }
   }
   if(!is.null(explicitProvenance)) {
@@ -134,11 +134,14 @@ internal_fc.reformPointsTimeseries <- function(resultList,explicitProvenance) { 
   }  
   
   for(i in 1:N) {
-    resV[i,] = resultList$values[[i]]
-    resU[i,] = resultList$sd[[i]]
-    if(!is.null(explicitProvenance))
+    resV[i,] = internal_fc.nullToNA(resultList$values[[i]])
+    resU[i,] = internal_fc.nullToNA(resultList$sd[[i]])
+    if(is.null(explicitProvenance))
       resP[i,] = resultList$provenance[[i]]
   }
+  resV <- matrix(resV,ncol=M,nrow=N)
+  resU <- matrix(resU,ncol=M,nrow=N)
+  resP <- matrix(resP,ncol=M,nrow=N)
   return(list(values=resV,sd=resU,provenance=resP))
 }
 
@@ -380,8 +383,17 @@ test.fc <-function() { #run automatic tests
   tests <- c(tests,function()
   {# test fcGrid  with datasource override 2
     a<- fcGrid("airt",40,80,10,10,200,10,firstYear=1950,lastYear=2000,firstDay=1,lastDay=31,dataSources=c("NCEP/NCAR Reanalysis 1 (regular grid)","CRU CL 2.0"))
-  }
-  )
+  })
+  tests <- c(tests,function()
+  {# test fcGrid  with datasource override 2
+  ts <- fcTimeSeriesYearly(
+    variable="airt",
+    latitude=8.0, longitude=10.0,
+    firstDay=152,lastDay=243,
+    firstYear=1950,lastYear=2050,
+    url='http://07600c5b4f0b43b5af7b5578e059e400.cloudapp.net/',
+    dataSource="GHCNv2")  
+  })
   
   #running tests
   print("Running automatic tests")
