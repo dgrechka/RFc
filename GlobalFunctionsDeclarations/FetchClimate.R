@@ -9,7 +9,7 @@ internal_fc.formRequestBody <- function(envVar, # must be private
                                               years,
                                               days,
                                               hours,
-                                              spatialRegionType,dataSources) {
+                                              spatialRegionType,dataSources,timestampStr) {
   ## JSON request object. 
   ## The text may be downloaded from http://fetchclimate2.cloudapp.net/form
   
@@ -45,22 +45,42 @@ internal_fc.formRequestBody <- function(envVar, # must be private
     else {
       dataSources <- I(dataSources)
     }
-  }  
+  }
+  
+  timestamp<-c()
+  if(timestampStr=="NOW") {
+    timestamp <- 253404979199999; #max value
+  }
+  else
+  {
+    timestampObj <- as.POSIXct(timestampStr, tz = "UTC", origin="1970-01-01")
+    timestamp<-as.numeric(timestampObj,digits=10)*1000;
+  }
+  
   
   request <- list(
     EnvironmentVariableName=envVar,
     ParticularDataSources=dataSources, 
-    Domain=domain
+    Domain=domain,
+    ReproducibilityTimestamp=timestamp
   )
   j <- toJSON(request)
   #print(j)
   return(j)
 }
 
-internal_fc.getConfiguration<-function(url) {
+internal_fc.getConfiguration<-function(url,timestempStr) {
   h = basicTextGatherer()
   h$reset()
-  curlPerform(url = paste(url,"/api/configuration",sep=''),
+  timestampPar <- c()
+  if(timestempStr=="NOW") {
+    timestampPar<-""
+  }
+  else {
+    timestamp <- as.POSIXct(timestempStr, tz = "UTC", origin="1970-01-01")
+    timestampPar<-paste("?timestamp=",format(timestamp,"%Y-%m-%dT%H:%MZ"),sep='')
+  }
+  curlPerform(url = paste(url,"/api/configuration",timestampPar,sep=''),
               httpheader=c(Accept="text/plain", 'Content-Type' = "application/json"),              
               writefunction = h$update)
   reply = h$value()
@@ -116,7 +136,7 @@ internal_fc.reformGridResponse <- function(resultList,lats,lons,explicitProvenan
                          sd=unlist(stratched_sd),
                          provenance=unlist(stratched_provenance))
   coordinates(resultdf) <- c("lon","lat") #promote to SpatialPointsDataFrame
-  proj4string(resultdf) <- CRS("+proj=longlat")
+  proj4string(resultdf) <- CRS("+proj=longlat") #unprojected data
   gridded(resultdf) <- TRUE # promote to SpatialPixelsDataFrame
   
   #resultdf <- as(resultdf, "SpatialGridDataFrame") # promote to SpatialGridDataFrame. creates the full grid
@@ -150,7 +170,7 @@ internal_fc.TimeSeries <-function(envVar, #must be private
                                   years,
                                   days,
                                   hours,
-                                  url,dataSources) {
+                                  url,dataSources,timestampStr) {
   N <- length(lat)
   if(length(lon) != N) {
     stop("lon and lat must be the same length");
@@ -161,11 +181,12 @@ internal_fc.TimeSeries <-function(envVar, #must be private
                                             days,
                                             hours,
                                             spatialRegionType="Points",
-                                            dataSources=dataSources);
+                                            dataSources=dataSources,
+                                            timestampStr=timestampStr);
   requestProvenance <- length(dataSources)>1 || dataSources=="ANY"  
   
   result <- internal_fc.fetchCore(json,url,requestProvenance)    
-  conf <- internal_fc.getConfiguration(url)
+  conf <- internal_fc.getConfiguration(url,timestampStr)
   explicitDs <- c()
   if(requestProvenance){
     explicitDs <- NULL
@@ -234,7 +255,8 @@ fcTimeSeriesYearly<-function(
   firstDay=1,lastDay=365,
   startHour=0,stopHour=24,
   url="http://fetchclimate2.cloudapp.net/",
-  dataSources="ANY"
+  dataSources="ANY",
+  reproduceFor="NOW"
   ) {
   #envVar is string
   #lat,lon are vectors with the same length (can be length of 1).
@@ -247,7 +269,7 @@ fcTimeSeriesYearly<-function(
   days <- c(firstDay,lastDay+1)
   hours <- c(startHour,stopHour)
   
-  resultMatrix <-internal_fc.TimeSeries(variable,latitude,longitude,years,days,hours,url,dataSources)
+  resultMatrix <-internal_fc.TimeSeries(variable,latitude,longitude,years,days,hours,url,dataSources,reproduceFor)
   
   resultMatrix$years <- years[1:(length(years)-1)]
   
@@ -261,7 +283,8 @@ fcTimeSeriesDaily<-function(
   firstYear=1961,lastYear=1990,
   startHour=0,stopHour=24,
   url="http://fetchclimate2.cloudapp.net/",
-  dataSources="ANY") {
+  dataSources="ANY",
+  reproduceFor="NOW") {
   #envVar is string
   #lat,lon are vectors with the same length (can be length of 1).  
   #firstDay,lastDay are scalars
@@ -273,7 +296,7 @@ fcTimeSeriesDaily<-function(
   days <- seq(from=firstDay,to=lastDay+1,by=1)
   hours <- c(startHour,stopHour)
   
-  resultMatrix <-internal_fc.TimeSeries(variable,latitude,longitude,years,days,hours,url,dataSources)
+  resultMatrix <-internal_fc.TimeSeries(variable,latitude,longitude,years,days,hours,url,dataSources,reproduceFor)
   
   resultMatrix$days <- days[1:(length(days)-1)]
   
@@ -287,7 +310,8 @@ fcTimeSeriesHourly<-function(
   firstYear=1961,lastYear=1990,
   firstDay=1,lastDay=365,
   url="http://fetchclimate2.cloudapp.net/",
-  dataSources="ANY") {
+  dataSources="ANY",
+  reproduceFor="NOW") {
   #envVar is string
   #lat,lon are vectors with the same length (can be length of 1).
   #startHour,stopHour are scalars
@@ -299,7 +323,7 @@ fcTimeSeriesHourly<-function(
   days <- c(firstDay,lastDay+1)
   hours <- seq(from=startHour,to=stopHour)
   
-  resultMatrix <-internal_fc.TimeSeries(variable,latitude,longitude,years,days,hours,url,dataSources)
+  resultMatrix <-internal_fc.TimeSeries(variable,latitude,longitude,years,days,hours,url,dataSources,reproduceFor)
   
   resultMatrix$hours <- hours[1:(length(hours))]
   
@@ -314,7 +338,8 @@ fcGrid <- function(
   firstDay=1,lastDay=365,
   startHour=0,stopHour=24,
   url="http://fetchclimate2.cloudapp.net/",
-  dataSources="ANY") {
+  dataSources="ANY",
+  reproduceFor="NOW") {
   
   lats <- seq(from=latitudeFrom,to=latitudeTo,by=latitudeBy)
   lons <- seq(from=longitudeFrom,to=longitudeTo,by=longitudeBy)
@@ -326,10 +351,10 @@ fcGrid <- function(
   requestBody <- internal_fc.formRequestBody(variable,
       lats,lons,
       years,days,hours,
-      "PointGrid",dataSources)
+      "PointGrid",dataSources,reproduceFor)
   requestProvenance <- length(dataSources)>1 || dataSources=="ANY"  
   response <- internal_fc.fetchCore(requestBody,url,requestProvenance)
-  conf <- internal_fc.getConfiguration(url)
+  conf <- internal_fc.getConfiguration(url,reproduceFor)
   explicitDs <- c()
   if(requestProvenance){
     explicitDs <- NULL
@@ -359,6 +384,11 @@ test.fc <-function() { #run automatic tests
     if(ncol(a$values)!=365) stop(paste("wrong time series length. expected 365 but got",ncol(a$values)))
   })
   tests <- c(tests,function()
+  {# test fcTimeSeriesHourly ,single point, timestamp set
+    a<-fcTimeSeriesHourly(variable="airt",latitude=75.0, longitude=57.7,firstYear=1950,lastYear=2000,startHour=0,stopHour=24,reproduceFor="2015-05-01")
+    if(ncol(a$values)!=24) stop(paste("wrong time series length. expected 24 but got",ncol(a$values)))
+  })
+  tests <- c(tests,function()
   {# test fcTimeSeriesHourly ,single point
     a<-fcTimeSeriesHourly(variable="airt",latitude=75.0, longitude=57.7,firstYear=1950,lastYear=2000,startHour=0,stopHour=24)
     if(ncol(a$values)!=24) stop(paste("wrong time series length. expected 24 but got",ncol(a$values)))
@@ -377,6 +407,14 @@ test.fc <-function() { #run automatic tests
     a<- fcGrid("airt",40,80,10,10,200,10,firstYear=1950,lastYear=2000,firstDay=1,lastDay=31)
   })
   tests <- c(tests,function()
+  {# test fcGrid with old reproduce timestamp
+    a<- fcGrid("airt",40,80,10,10,200,10,firstYear=1950,lastYear=2000,firstDay=1,lastDay=31,reproduceFor="2015-05-01 05:00:00")
+  })
+  tests <- c(tests,function()
+  {# test fcGrid with old reproduce timestamp
+    a<- fcGrid("airt",40,80,10,10,200,10,firstYear=1950,lastYear=2000,firstDay=1,lastDay=31,reproduceFor="2015-05-01")
+  })
+  tests <- c(tests,function()
   {# test fcGrid  with datasource override
     a<- fcGrid("airt",40,80,10,10,200,10,firstYear=1950,lastYear=2000,firstDay=1,lastDay=31,dataSources=c("NCEP/NCAR Reanalysis 1 (regular grid)"))
   })
@@ -391,7 +429,7 @@ test.fc <-function() { #run automatic tests
     latitude=8.0, longitude=10.0,
     firstDay=152,lastDay=243,
     firstYear=1950,lastYear=2050,
-    url='http://07600c5b4f0b43b5af7b5578e059e400.cloudapp.net/',
+    url='http://d26b86d28d154ba48a51791015b421df.cloudapp.net/',
     dataSource="GHCNv2")  
   })
   
@@ -401,7 +439,7 @@ test.fc <-function() { #run automatic tests
     print(paste("Running test",i,"out of",length(tests)))
     tests[[i]]();
   }
-  print("All tests finished. Ready to use")
+  print("All tests have passed. Ready to use")
 }
 
 test.fc()
