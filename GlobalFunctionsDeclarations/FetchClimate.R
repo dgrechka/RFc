@@ -64,7 +64,7 @@ internal_fc.formRequestBody <- function(envVar, # must be private
     Domain=domain,
     ReproducibilityTimestamp=timestamp
   )
-  j <- toJSON(request)
+  j <- toJSON(request,digits=20)
   #print(j)
   return(j)
 }
