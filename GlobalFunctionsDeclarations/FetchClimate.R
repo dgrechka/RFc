@@ -47,14 +47,15 @@ internal_fc.formRequestBody <- function(envVar, # must be private
     }
   }
   
+  
   timestamp<-c()
   if(timestampStr=="NOW") {
     timestamp <- 253404979199999; #max value
   }
   else
-  {
+  {#"/Date(1317303882420+0500)\/" format
     timestampObj <- as.POSIXct(timestampStr, tz = "UTC", origin="1970-01-01")
-    timestamp<-as.numeric(timestampObj,digits=10)*1000;
+    timestamp<-paste("/Date(",as.numeric(timestampObj,digits=20),"000+0000)/",sep='');
   }
   
   
