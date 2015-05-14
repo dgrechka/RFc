@@ -397,11 +397,14 @@ test.fc <-function() { #run automatic tests
   tests <- c(tests,function()
   {# test fcTimeSeriesDaily , lots of points
     data(quakes) #the only built-in dataset with locations which I’ve found. The Fiji earthquakes
-    fcTimeSeriesDaily( #fetching day-to-day temperature variations at earthquake locations
+    a<-fcTimeSeriesDaily( #fetching day-to-day temperature variations at earthquake locations
       "airt", 
       quakes$lat, quakes$long,
       firstYear=1981, lastYear=2000 #averaging across 20 years
-    )  
+    )
+    if(ncol(a$values)!=365) stop(paste("wrong time series length. expected 365 but got",ncol(a$values)))
+    if(nrow(a$values)!=length(quakes$lat)) stop(paste("wrong time series count expected",length(quakes$lat),"but got",ncol(a$values)))
+    
   })
   tests <- c(tests,function()
   {# test fcGrid 
@@ -430,7 +433,7 @@ test.fc <-function() { #run automatic tests
     latitude=8.0, longitude=10.0,
     firstDay=152,lastDay=243,
     firstYear=1950,lastYear=2050,
-    url='http://d26b86d28d154ba48a51791015b421df.cloudapp.net/',
+    url='http://eafb05330fec4e289d897904b3b6c2b3.cloudapp.net/',
     dataSource="GHCNv2")  
   })
   
