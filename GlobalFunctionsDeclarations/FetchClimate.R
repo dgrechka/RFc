@@ -433,7 +433,7 @@ test.fc <-function() { #run automatic tests
     latitude=8.0, longitude=10.0,
     firstDay=152,lastDay=243,
     firstYear=1950,lastYear=2050,
-    url='http://eafb05330fec4e289d897904b3b6c2b3.cloudapp.net/',
+    url='http://fetchclim.cloudapp.net/',
     dataSets="GHCNv2")  
   })
   
