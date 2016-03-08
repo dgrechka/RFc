@@ -434,7 +434,7 @@ test.fc <-function() { #run automatic tests
     firstDay=152,lastDay=243,
     firstYear=1950,lastYear=2050,
     url='http://fetchclim.cloudapp.net/',
-    dataSets="GHCNv2")  
+    dataSets="CRU CL 2.0")  
   })
   
   #running tests
