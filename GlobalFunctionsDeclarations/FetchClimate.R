@@ -1,8 +1,8 @@
 #git repo at https://github.com/dgrechka/Rfc
 
-require(RCurl)
 require(RJSONIO)
 require(sp)
+require(httr)
 
 internal_fc.formRequestBody <- function(envVar, # must be private
                                               lat,lon,
@@ -70,22 +70,21 @@ internal_fc.formRequestBody <- function(envVar, # must be private
   return(j)
 }
 
-internal_fc.getConfiguration<-function(url,timestempStr) {
-  h = basicTextGatherer()
-  h$reset()
-  timestampPar <- c()
+internal_fc.getConfiguration<-function(url,timestempStr) {  
+  query <- list()
   if(timestempStr=="NOW") {
-    timestampPar<-""
+    # query list remains empty
   }
-  else {
+  else {    
     timestamp <- as.POSIXct(timestempStr, tz = "UTC", origin="1970-01-01")
-    timestampPar<-paste("?timestamp=",format(timestamp,"%Y-%m-%dT%H:%MZ"),sep='')
-  }
-  curlPerform(url = paste(url,"/api/configuration",timestampPar,sep=''),
-              httpheader=c(Accept="text/plain", 'Content-Type' = "application/json"),              
-              writefunction = h$update)
-  reply = h$value()
-  result=fromJSON(h$value())
+    query <- list(timestamp=format(timestamp,"%Y-%m-%dT%H:%MZ"))    
+  }  
+  reply <- GET(url,
+               path="/api/configuration",
+               query=query,
+               accept("text/plain"),
+               content_type("application/json"))
+  result <- content(reply)
   return(result)
 }
 
@@ -103,10 +102,10 @@ internal_fc.nullToNA <- function(x) {
 }
 
 internal_fc.replaceProvIDwithNames <- function(values,configuration) {
-  replaced <- values;
+  replaced <- as.numeric(values);
   for(i in 1:length(configuration$DataSources)) {
     current <- configuration$DataSources[[i]]    
-    replaced[values==current$ID]<-current$Name
+    replaced[as.logical(values==current$ID)]<-current$Name
   }
   return(factor(replaced))
 }
@@ -155,10 +154,10 @@ internal_fc.reformPointsTimeseries <- function(resultList,explicitProvenance) { 
   }  
   
   for(i in 1:N) {
-    resV[i,] = internal_fc.nullToNA(resultList$values[[i]])
-    resU[i,] = internal_fc.nullToNA(resultList$sd[[i]])
+    resV[i,] = internal_fc.nullToNA(as.numeric(resultList$values[[i]]))
+    resU[i,] = internal_fc.nullToNA(as.numeric(resultList$sd[[i]]))
     if(is.null(explicitProvenance))
-      resP[i,] = resultList$provenance[[i]]
+      resP[i,] = as.numeric(resultList$provenance[[i]])
   }
   resV <- matrix(resV,ncol=M,nrow=N)
   resU <- matrix(resU,ncol=M,nrow=N)
@@ -203,25 +202,20 @@ internal_fc.TimeSeries <-function(envVar, #must be private
 
 internal_fc.fetchCore <- function(jsonRequest,url,requestProvenance) {
   #print("requesting JSON")
-  #print(jsonRequest)
-  h = basicTextGatherer()
-  h$reset()
-  curlPerform(url = paste(url,"/api/compute",sep=''),
-              httpheader=c(Accept="text/plain", 'Content-Type' = "application/json"),
-              postfields=jsonRequest,
-              writefunction = h$update)
-  reply = h$value()
+  #print(jsonRequest)  
+  replyRaw <- POST(url,path="/api/compute",accept("text/plain"),content_type("application/json"),body=jsonRequest)
+  reply<-content(replyRaw)
   print(reply)
   
   ## wait while processing in progress
   while (substr(reply,1,7)=='pending' || substr(reply,1,8)=='progress') {
     Sys.sleep(1)
-    hash=strsplit(reply,"hash=")[[1]][2]
-    h$reset()
-    curlPerform(url = paste(url,"/api/status?hash=",curlEscape(hash),sep=""),
-                httpheader=c(Accept="text/plain"),
-                writefunction = h$update)
-    reply = h$value()
+    hash=strsplit(reply,"hash=")[[1]][2]    
+    replyRaw <- GET(url,
+                    path="/api/status",
+                    query=list(hash=hash),
+                    accept("text/plain")) 
+    reply = content(replyRaw)
     print(reply)
   }
   
@@ -230,20 +224,21 @@ internal_fc.fetchCore <- function(jsonRequest,url,requestProvenance) {
   ## get result data
   print("Receiving data...")
   if (substr(reply,1,9)=='completed') {
-    msds = substr(reply,11,nchar(reply))
-    h$reset()
-    end_str <- c()
+    msds = substr(reply,11,nchar(reply))    
+    vars_to_fetch <- c()
     if(requestProvenance) {
-      end_str <- "&variables=values,provenance,sd"
+      vars_to_fetch <- "values,provenance,sd"
     }
     else {
-      end_str <- "&variables=values,sd"
-    }
-    curlPerform(url = paste(url,"/jsproxy/data?uri=",curlEscape(msds),end_str,sep=""),
-                httpheader=c(Accept="application/json"),
-                writefunction = h$update)
-    #print(h$value())
-    result=fromJSON(h$value())
+      vars_to_fetch <- "values,sd"
+    }    
+    replyRaw <- GET(url,
+                    path="/jsproxy/data",
+                    query=list(uri=msds,variables=vars_to_fetch),
+                    accept("text/plain"),
+                    content_type("application/json"))    
+    #print(replyRaw)
+    result=content(replyRaw)
   }
   return(result);
 }
