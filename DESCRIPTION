@@ -1,0 +1,32 @@
+Package: RFc
+Type: Package
+Title: Client for FetchClimate WEB Service
+Version: 0.1-1
+Date: 2016-03-25
+Description: Extracts, interpolates and averages environmental data (such as air temperature, precipitation rate, wind speed, etc.) from FetchClimate WEB service for the specified geo-locations and time bounds from differenet data sets.
+Authors@R: c(person(first="Dmitry",
+                family="Grechka",
+                middle="A.",
+                email="dmitryg@itis.cs.msu.ru",
+                role=c("aut","cre")),
+        person(first="Sergey",
+                family="Berezin",
+                middle="B.",
+                role="ctb"),
+        person(first="Stephen",
+                family="Emmott",
+                middle="J.",
+                role="ctb"),
+        person(given="Vassily",
+                family="Lyutsarev",                
+                role="ctb"),
+        person(first="Matthew",
+                family="Smith",
+                middle="J.",
+                role="ctb"),
+        person(first="Drew",
+                family="Purves",
+                middle="W.",
+                role="ctb"))
+License: MIT
+Depends: jsonlite, httr
