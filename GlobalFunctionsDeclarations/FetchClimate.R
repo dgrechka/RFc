@@ -1,6 +1,6 @@
 #git repo at https://github.com/dgrechka/Rfc
 
-require(RJSONIO)
+require(jsonlite)
 require(sp)
 require(httr)
 
@@ -24,26 +24,26 @@ internal_fc.formRequestBody <- function(envVar, # must be private
   
   if(length(lat) == 1)
   {
-    lat <- I(lat)
-    lon <- I(lon)
+    lat <- lat
+    lon <- lon
   }
   
   domain <- list(
     Lats=lat,
-    Lats2=NULL,
+    Lats2=unbox(NA),
     Lons=lon,
-    Lons2=NULL,
+    Lons2=unbox(NA),
     TimeRegion=timeRegion,
-    Mask=NULL,
-    SpatialRegionType=spatialRegionType
+    Mask=unbox(NA),
+    SpatialRegionType=unbox(spatialRegionType)
   )    
   
   if(length(dataSets)==1) {
     if(dataSets=="ANY") {
-      dataSets <- "";# any availalbe
+      dataSets <- unbox("");# any availalbe
     }
     else {
-      dataSets <- I(dataSets)
+      dataSets <- dataSets
     }
   }
   
@@ -60,12 +60,12 @@ internal_fc.formRequestBody <- function(envVar, # must be private
   
   
   request <- list(
-    EnvironmentVariableName=envVar,
+    EnvironmentVariableName=unbox(envVar),
     ParticularDataSources=dataSets, 
     Domain=domain,
-    ReproducibilityTimestamp=timestamp
+    ReproducibilityTimestamp=unbox(timestamp)
   )
-  j <- toJSON(request,digits=20)
+  j <- toJSON(request,digits=20, pretty=TRUE)
   #print(j)
   return(j)
 }
