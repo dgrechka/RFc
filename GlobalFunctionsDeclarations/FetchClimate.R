@@ -154,8 +154,8 @@ internal_fc.reformPointsTimeseries <- function(resultList,explicitProvenance) { 
   }  
   
   for(i in 1:N) {
-    resV[i,] = internal_fc.nullToNA(as.numeric(resultList$values[[i]]))
-    resU[i,] = internal_fc.nullToNA(as.numeric(resultList$sd[[i]]))
+    resV[i,] = as.numeric(internal_fc.nullToNA(resultList$values[[i]]))
+    resU[i,] = as.numeric(internal_fc.nullToNA(resultList$sd[[i]]))
     if(is.null(explicitProvenance))
       resP[i,] = as.numeric(resultList$provenance[[i]])
   }
@@ -375,7 +375,7 @@ test.fc <-function() { #run automatic tests
     if(ncol(a$values)!=51) stop(paste("wrong time series length. expected 51 but got",ncol(a$values)))
   })
   tests <- c(tests,function()
-  {# test fcTimeSeriesDayly ,single point
+  {# test fcTimeSeriesDaily ,single point
     a<-fcTimeSeriesDaily(variable="airt",latitude=75.0, longitude=57.7,firstYear=1950,lastYear=2000)
     if(ncol(a$values)!=365) stop(paste("wrong time series length. expected 365 but got",ncol(a$values)))
   })
@@ -430,6 +430,60 @@ test.fc <-function() { #run automatic tests
     firstYear=1950,lastYear=2050,
     url='http://fetchclim.cloudapp.net/',
     dataSets="CRU CL 2.0")  
+  })
+  tests <- c(tests,function()
+  {# Fc Paper figure 1 request
+    ts <- fcTimeSeriesYearly(
+      variable="airt",
+      latitude=8.0, longitude=10.0,
+      firstDay=152,lastDay=243,
+      firstYear=1950,lastYear=2050,
+      url='http://fetchclim.cloudapp.net/',
+      reproduceFor='2015-05-27')
+    
+  })
+  tests <- c(tests,function()
+  {# Fc Paper figure 2 request
+    africaJulyTemp <- fcGrid(variable="airt",
+                             latitudeFrom=-35, latitudeTo=35, latitudeBy=1,
+                             longitudeFrom=-20,longitudeTo=60,longitudeBy=1,
+                             firstDay=182,lastDay=212, #July
+                             firstYear=1950,lastYear=2000,
+                             url='http://fetchclim.cloudapp.net/',
+                             reproduceFor='2015-05-27')        
+  })  
+  tests <- c(tests,function()
+  {# Fc Paper figure 3 request #1
+    ts <- fcTimeSeriesYearly(
+      variable="airt",
+      latitude=8.0, longitude=10.0,
+      firstDay=152,lastDay=243,
+      firstYear=1950,lastYear=2050,
+      url='http://fetchclim.cloudapp.net/',
+      dataSet="GHCNv2",
+      reproduceFor='2015-05-27')    
+  })  
+  tests <- c(tests,function()
+  {# Fc Paper figure 3 request #2
+    ts2 <- fcTimeSeriesYearly(
+      variable="airt",
+      latitude=8.0, longitude=10.0,
+      firstDay=152,lastDay=243,
+      firstYear=1950,lastYear=2050,
+      url='http://fetchclim.cloudapp.net/',
+      dataSet ="NCEP/NCAR Reanalysis 1 (regular grid)",
+      reproduceFor='2015-05-27')    
+  })
+  tests <- c(tests,function()
+  {# Fc Paper figure 3 request #3
+    ts3 <- fcTimeSeriesYearly(
+      variable="airt",
+      latitude=8.0, longitude=10.0,
+      firstDay=152,lastDay=243,
+      firstYear=1950,lastYear=2050,
+      url='http://fetchclim.cloudapp.net/',
+      dataSet ="CESM1-BGC airt",
+      reproduceFor='2015-05-27')  
   })
   
   #running tests
