@@ -2,15 +2,18 @@
 
 #' RFc: R client for FetchClimate service
 #'
-#' Extracts environmental data (such as air temperature, precipitation rate, wind speed, etc.) from FetchClimate WEB service 
-#' for the specified geo-locations and time bounds.
+#' Extracts raw, averaged environmental data (such as air
+#' temperature, precipitation rate, wind speed, etc.) published at FetchClimate WEB service
+#' for the specified geo-locations and time bounds from differenet data sets.
 #' 
 #' @section Time series fetching functions:
 #' fcTimeSeriesYearly, fcTimeSeriesDaily, fcTimeSeriesHourly
 #'
+#' @section Gridded data fetching functions:
+#' fcGrid
+#'
 #' @docType package
 #' @name RFc
-#' @description Extracts environmental data (such as air temperature, precipitation rate, wind speed, etc.) from FetchClimate web service for the specified geo-locations and time bounds.
 #' 
 NULL
 
@@ -25,15 +28,15 @@ internal_fc.formRequestBody <- function(envVar, # must be private
                                         hours,
                                         spatialRegionType,dataSets,timestampStr) {
         ## JSON request object. 
-        ## The text may be downloaded from http://fetchclimate2.cloudapp.net/form
+        ## The text may be downloaded from http://fetchclim.cloudapp.net/form
         
         timeRegion <- list(
                 Years=years,
                 Days=days,
                 Hours=hours,
-                IsIntervalsGridYears=T,
-                IsIntervalsGridDays=T,
-                IsIntervalsGridHours=T
+                IsIntervalsGridYears=unbox(T),
+                IsIntervalsGridDays=unbox(T),
+                IsIntervalsGridHours=unbox(T)
         )
         
         if(length(lat) == 1)
@@ -157,9 +160,9 @@ internal_fc.reformGridResponse <- function(resultList,lats,lons,explicitProvenan
         return(resultdf)
 }
 
-internal_fc.reformPointsTimeseries <- function(resultList,explicitProvenance) { #must be private. accepts the decoded JSON recieved from FC result proxy. converts it into matrix
-        N <- length(resultList$values)
-        M <- length(resultList$values[[1]])
+internal_fc.reformPointsTimeseries <- function(resultList,explicitProvenance,locationsCount) { #must be private. accepts the decoded JSON recieved from FC result proxy. converts it into matrix
+        N <- locationsCount
+        M <- length(unlist(resultList$values))/N
         resV <- matrix(ncol=M,nrow=N)
         resU <- matrix(ncol=M,nrow=N)
         resP <- matrix(ncol=M,nrow=N)
@@ -168,10 +171,10 @@ internal_fc.reformPointsTimeseries <- function(resultList,explicitProvenance) { 
         }  
         
         for(i in 1:N) {
-                resV[i,] = as.numeric(internal_fc.nullToNA(resultList$values[[i]]))
-                resU[i,] = as.numeric(internal_fc.nullToNA(resultList$sd[[i]]))
+                resV[i,] = unlist(internal_fc.nullToNA(resultList$values[[i]]))
+                resU[i,] = unlist(internal_fc.nullToNA(resultList$sd[[i]]))
                 if(is.null(explicitProvenance))
-                        resP[i,] = as.numeric(resultList$provenance[[i]])
+                        resP[i,] = unlist(resultList$provenance[[i]])
         }
         resV <- matrix(resV,ncol=M,nrow=N)
         resU <- matrix(resU,ncol=M,nrow=N)
@@ -208,7 +211,7 @@ internal_fc.TimeSeries <-function(envVar, #must be private
         else {
                 explicitDs<-internal_fc.getProvID(conf,dataSets)
         }
-        resultMatrix <- internal_fc.reformPointsTimeseries(result,explicitDs)
+        resultMatrix <- internal_fc.reformPointsTimeseries(result,explicitDs,length(lat))
         resultMatrix$provenance <- internal_fc.replaceProvIDwithNames(resultMatrix$provenance,conf)
         
         return(resultMatrix)
@@ -216,7 +219,7 @@ internal_fc.TimeSeries <-function(envVar, #must be private
 
 internal_fc.fetchCore <- function(jsonRequest,url,requestProvenance) {
         #print("requesting JSON")
-        #print(jsonRequest)  
+        #print(jsonRequest)
         replyRaw <- POST(url,path="/api/compute",accept("text/plain"),content_type("application/json"),body=jsonRequest)
         reply<-content(replyRaw)
         print(reply)
@@ -250,7 +253,8 @@ internal_fc.fetchCore <- function(jsonRequest,url,requestProvenance) {
                                 path="/jsproxy/data",
                                 query=list(uri=msds,variables=vars_to_fetch),
                                 accept("text/plain"),
-                                content_type("application/json"))    
+                                content_type("application/json"),
+                                add_headers('Accept-Encoding'= "identity"))    
                 #print(replyRaw)
                 result=content(replyRaw)
         }
@@ -260,11 +264,12 @@ internal_fc.fetchCore <- function(jsonRequest,url,requestProvenance) {
 
 #' Fetches time series data for a set of locations
 #' 
-#' For a given set of geo-locations (lat - lon pairs) and given time interval fetches the time series data. Time series is formed by splitting the time interval either by years ob by days or by hours
+#' For a given set of geo-locations (lat - lon pairs) and given time interval fetches the time series data. Time series is formed by splitting the time interval either by years or by days or by hours
 #' 
 #' 
 #' @name TimeSeries
-#' @param variable A variable name to fetch
+#' @param variable An identifier of the variable to fetch.
+#' To see the full list of supported variables navigate to the service url with the browser, explore the "What?" tab in the web application for .
 #' @param latitude A numeric vector. Latitudes of the point set to fetch values for
 #' @param longitude A numeric vector. Longitudes of the point set to fetch values for
 #' @param firstYear A numeric scalar. Temporal coverage definition: The lower bound of years over which the averaging is performed
@@ -283,7 +288,15 @@ internal_fc.fetchCore <- function(jsonRequest,url,requestProvenance) {
 #' ncol(values) = time series length;
 
 #' @examples
-#' fcTimeSeriesYearly(variable="airt",latitude=75.0, longitude=57.7,firstYear=1950,lastYear=2000)
+#' #Fetching a whole year average time series (varing year one by one starting from 1950 till 2000 inclusevly)
+#' #for a single geo point
+#' fcTimeSeriesYearly(variable="airt",latitude=75.5, longitude=57.7,firstYear=1950,lastYear=2000)
+#'
+#' #Fetching diurnal temperature variation (hourly time series) in Moscow for a July 2008
+#' fcTimeSeriesHourly(variable="airt",latitude=55.5, longitude=37.3,
+#'      firstDay=183,lastDay=213,
+#'      firstYear=2008,lastYear=2008,
+#'      startHour=0,stopHour=24)
 #' 
 NULL
 
@@ -298,7 +311,7 @@ fcTimeSeriesYearly<-function(
         firstYear,lastYear,
         firstDay=1,lastDay=365,
         startHour=0,stopHour=24,
-        url="http://fetchclimate2.cloudapp.net/",
+        url="http://fetchclim.cloudapp.net/",
         dataSets="ANY",
         reproduceFor="NOW"
 ) {
@@ -331,7 +344,7 @@ fcTimeSeriesDaily<-function(
         firstDay=1,lastDay=365,
         firstYear=1961,lastYear=1990,
         startHour=0,stopHour=24,
-        url="http://fetchclimate2.cloudapp.net/",
+        url="http://fetchclim.cloudapp.net/",
         dataSets="ANY",
         reproduceFor="NOW") {
         #envVar is string
@@ -363,7 +376,7 @@ fcTimeSeriesHourly<-function(
         startHour,stopHour,
         firstYear=1961,lastYear=1990,
         firstDay=1,lastDay=365,
-        url="http://fetchclimate2.cloudapp.net/",
+        url="http://fetchclim.cloudapp.net/",
         dataSets="ANY",
         reproduceFor="NOW") {
         #envVar is string
@@ -384,8 +397,7 @@ fcTimeSeriesHourly<-function(
         return(resultMatrix)
 }
 
-
-#' Fetches a grid
+#' Fetches a gridded data
 #' @import httr
 #' @import jsonlite
 #' @import sp
@@ -397,6 +409,18 @@ fcTimeSeriesHourly<-function(
 #' @param longitudeTo A numeric scalar. The upper longitudes bound of the spatial grid
 #' @param longitudeBy A numeric scalar. The step of the grid along longitudes.
 #' @inheritParams TimeSeries
+#' 
+#' @examples
+#' #Fetching average potential evapotransiration for the upper part of Africa continent
+#' #for Januries 2000-2010
+#' #With 1 degree grid resolution
+#' 
+#' fcGrid(variable="pet",
+#'      latitudeFrom=0, latitudeTo=35,latitudeBy=1,
+#'      longitudeFrom= -25, longitudeTo=50, longitudeBy=1,
+#'      firstDay=1,lastDay=31,
+#'      firstYear=2000,lastYear=2010)
+
 fcGrid <- function(
         variable,
         latitudeFrom,latitudeTo,latitudeBy,
@@ -404,7 +428,7 @@ fcGrid <- function(
         firstYear=1961,lastYear=1990,
         firstDay=1,lastDay=365,
         startHour=0,stopHour=24,
-        url="http://fetchclimate2.cloudapp.net/",
+        url="http://fetchclim.cloudapp.net/",
         dataSets="ANY",
         reproduceFor="NOW") {
         
@@ -436,134 +460,3 @@ fcGrid <- function(
         
         return(spObj);
 }
-
-test.fc <-function() { #run automatic tests
-        #declaring tests
-        tests <- c()
-        tests <- c(tests,function()
-        {# test fcTimeSeriesYearly ,single point
-                a <- fcTimeSeriesYearly(variable="airt",latitude=75.0, longitude=57.7,firstYear=1950,lastYear=2000)
-                if(ncol(a$values)!=51) stop(paste("wrong time series length. expected 51 but got",ncol(a$values)))
-        })
-        tests <- c(tests,function()
-        {# test fcTimeSeriesDaily ,single point
-                a<-fcTimeSeriesDaily(variable="airt",latitude=75.0, longitude=57.7,firstYear=1950,lastYear=2000)
-                if(ncol(a$values)!=365) stop(paste("wrong time series length. expected 365 but got",ncol(a$values)))
-        })
-        tests <- c(tests,function()
-        {# test fcTimeSeriesHourly ,single point, timestamp set
-                a<-fcTimeSeriesHourly(variable="airt",latitude=75.0, longitude=57.7,firstYear=1950,lastYear=2000,startHour=0,stopHour=24,reproduceFor="2015-05-01")
-                if(ncol(a$values)!=24) stop(paste("wrong time series length. expected 24 but got",ncol(a$values)))
-        })
-        tests <- c(tests,function()
-        {# test fcTimeSeriesHourly ,single point
-                a<-fcTimeSeriesHourly(variable="airt",latitude=75.0, longitude=57.7,firstYear=1950,lastYear=2000,startHour=0,stopHour=24)
-                if(ncol(a$values)!=24) stop(paste("wrong time series length. expected 24 but got",ncol(a$values)))
-        })
-        tests <- c(tests,function()
-        {# test fcTimeSeriesDaily , lots of points
-                data(quakes) #the only built-in dataset with locations which Ib ve found. The Fiji earthquakes
-                a<-fcTimeSeriesDaily( #fetching day-to-day temperature variations at earthquake locations
-                        "airt", 
-                        quakes$lat, quakes$long,
-                        firstYear=1981, lastYear=2000 #averaging across 20 years
-                )
-                if(ncol(a$values)!=365) stop(paste("wrong time series length. expected 365 but got",ncol(a$values)))
-                if(nrow(a$values)!=length(quakes$lat)) stop(paste("wrong time series count expected",length(quakes$lat),"but got",ncol(a$values)))
-                
-        })
-        tests <- c(tests,function()
-        {# test fcGrid 
-                a<- fcGrid("airt",40,80,10,10,200,10,firstYear=1950,lastYear=2000,firstDay=1,lastDay=31)
-        })
-        tests <- c(tests,function()
-        {# test fcGrid with old reproduce timestamp
-                a<- fcGrid("airt",40,80,10,10,200,10,firstYear=1950,lastYear=2000,firstDay=1,lastDay=31,reproduceFor="2015-05-01 05:00:00")
-        })
-        tests <- c(tests,function()
-        {# test fcGrid with old reproduce timestamp
-                a<- fcGrid("airt",40,80,10,10,200,10,firstYear=1950,lastYear=2000,firstDay=1,lastDay=31,reproduceFor="2015-05-01")
-        })
-        tests <- c(tests,function()
-        {# test fcGrid  with datasource override
-                a<- fcGrid("airt",40,80,10,10,200,10,firstYear=1950,lastYear=2000,firstDay=1,lastDay=31,dataSets=c("NCEP/NCAR Reanalysis 1 (regular grid)"))
-        })
-        tests <- c(tests,function()
-        {# test fcGrid  with datasource override 2
-                a<- fcGrid("airt",40,80,10,10,200,10,firstYear=1950,lastYear=2000,firstDay=1,lastDay=31,dataSets=c("NCEP/NCAR Reanalysis 1 (regular grid)","CRU CL 2.0"))
-        })
-        tests <- c(tests,function()
-        {# test fcGrid  with datasource override 2
-                ts <- fcTimeSeriesYearly(
-                        variable="airt",
-                        latitude=8.0, longitude=10.0,
-                        firstDay=152,lastDay=243,
-                        firstYear=1950,lastYear=2050,
-                        url='http://fetchclim.cloudapp.net/',
-                        dataSets="CRU CL 2.0")  
-        })
-        tests <- c(tests,function()
-        {# Fc Paper figure 1 request
-                ts <- fcTimeSeriesYearly(
-                        variable="airt",
-                        latitude=8.0, longitude=10.0,
-                        firstDay=152,lastDay=243,
-                        firstYear=1950,lastYear=2050,
-                        url='http://fetchclim.cloudapp.net/',
-                        reproduceFor='2015-05-27')
-                
-        })
-        tests <- c(tests,function()
-        {# Fc Paper figure 2 request
-                africaJulyTemp <- fcGrid(variable="airt",
-                                         latitudeFrom=-35, latitudeTo=35, latitudeBy=1,
-                                         longitudeFrom=-20,longitudeTo=60,longitudeBy=1,
-                                         firstDay=182,lastDay=212, #July
-                                         firstYear=1950,lastYear=2000,
-                                         url='http://fetchclim.cloudapp.net/',
-                                         reproduceFor='2015-05-27')        
-        })  
-        tests <- c(tests,function()
-        {# Fc Paper figure 3 request #1
-                ts <- fcTimeSeriesYearly(
-                        variable="airt",
-                        latitude=8.0, longitude=10.0,
-                        firstDay=152,lastDay=243,
-                        firstYear=1950,lastYear=2050,
-                        url='http://fetchclim.cloudapp.net/',
-                        dataSets="GHCNv2",
-                        reproduceFor='2015-05-27')    
-        })  
-        tests <- c(tests,function()
-        {# Fc Paper figure 3 request #2
-                ts2 <- fcTimeSeriesYearly(
-                        variable="airt",
-                        latitude=8.0, longitude=10.0,
-                        firstDay=152,lastDay=243,
-                        firstYear=1950,lastYear=2050,
-                        url='http://fetchclim.cloudapp.net/',
-                        dataSets ="NCEP/NCAR Reanalysis 1 (regular grid)",
-                        reproduceFor='2015-05-27')    
-        })
-        tests <- c(tests,function()
-        {# Fc Paper figure 3 request #3
-                ts3 <- fcTimeSeriesYearly(
-                        variable="airt",
-                        latitude=8.0, longitude=10.0,
-                        firstDay=152,lastDay=243,
-                        firstYear=1950,lastYear=2050,
-                        url='http://fetchclim.cloudapp.net/',
-                        dataSets ="CESM1-BGC airt",
-                        reproduceFor='2015-05-27')  
-        })
-        
-        #running tests
-        print("Running automatic tests")
-        for(i in 1:length(tests)){
-                print(paste("Running test",i,"out of",length(tests)))
-                tests[[i]]();
-        }
-        print("All tests have passed. Ready to use")
-}
-
-#test.fc()

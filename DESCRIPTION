@@ -3,9 +3,10 @@ Type: Package
 Title: Client for FetchClimate WEB Service
 Version: 0.1-1
 Date: 2016-03-25
-Description: Extracts, interpolates and averages environmental data (such as air
-    temperature, precipitation rate, wind speed, etc.) from FetchClimate WEB service
-    for the specified geo-locations and time bounds from differenet data sets.
+Description: Extracts raw, averaged environmental data (such as
+   air temperature, precipitation rate, wind speed, etc.)
+   for the specified geo-locations and time bounds
+   from differenet data sets published at FetchClimate WEB service
 Authors@R: c(person(first="Dmitry",
                 family="Grechka",
                 middle="A.",
@@ -31,6 +32,7 @@ Authors@R: c(person(first="Dmitry",
                 middle="W.",
                 role="ctb"))
 License: MIT
+Suggests: testthat
 Depends:
     jsonlite,
     httr,
