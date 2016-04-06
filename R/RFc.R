@@ -160,9 +160,9 @@ internal_fc.reformGridResponse <- function(resultList,lats,lons,explicitProvenan
         return(resultdf)
 }
 
-internal_fc.reformPointsTimeseries <- function(resultList,explicitProvenance,locationsCount) { #must be private. accepts the decoded JSON recieved from FC result proxy. converts it into matrix
-        N <- locationsCount
-        M <- length(unlist(resultList$values))/N
+internal_fc.reformPointsTimeseries <- function(resultList,explicitProvenance) { #must be private. accepts the decoded JSON recieved from FC result proxy. converts it into matrix        
+        N <- length(resultList$values) #locations count
+        M <- length(resultList$values[[1]]) # timeseries length
         resV <- matrix(ncol=M,nrow=N)
         resU <- matrix(ncol=M,nrow=N)
         resP <- matrix(ncol=M,nrow=N)
@@ -211,7 +211,7 @@ internal_fc.TimeSeries <-function(envVar, #must be private
         else {
                 explicitDs<-internal_fc.getProvID(conf,dataSets)
         }
-        resultMatrix <- internal_fc.reformPointsTimeseries(result,explicitDs,length(lat))
+        resultMatrix <- internal_fc.reformPointsTimeseries(result,explicitDs)
         resultMatrix$provenance <- internal_fc.replaceProvIDwithNames(resultMatrix$provenance,conf)
         
         return(resultMatrix)
@@ -320,7 +320,6 @@ fcTimeSeriesYearly<-function(
         #firstYear,lastYear are scalars
         
         #return a list with NxM matrices (values,sd,provenance). N = length(lat), M = timeseries length
-        
         
         years <- seq(from=firstYear,to=lastYear+1,by=1)
         days <- c(firstDay,lastDay+1)

@@ -6,7 +6,7 @@ set.seed(seed)
 
 offset <- runif(1) #cache braking offset. used in all tests
 
-print(cat("Random seed is ",seed,"; Cache braking offset is",offset))
+print(cat("Random seed is ",seed,"; Cache braking offset is",offset));
 
 test_that("fcTimeSeriesYearly timeseries correct length for single point", {
         a <- fcTimeSeriesYearly(variable="airt",latitude=76.0+offset, longitude=57.7,firstYear=1950,lastYear=2000)
@@ -71,9 +71,10 @@ test_that("fcGrid succeeds with two datasets specified", {
         a<- fcGrid("airt",40+offset,80+offset,10,10,200,10,firstYear=1950,lastYear=2000,firstDay=1,lastDay=31,dataSets=c("NCEP/NCAR Reanalysis 1 (regular grid)","CRU CL 2.0"))
 })
 
-context("Fc paper figure related fetchs")
 
-test_that("Fc Paper figure 1 fetch succeeds", {
+context("Fc paper figure related fetches")
+
+test_that("original Fc Paper figure 1 fetch succeeds", {
         ts <- fcTimeSeriesYearly(
                 variable="airt",
                 latitude=8.0, longitude=10.0,
@@ -83,7 +84,8 @@ test_that("Fc Paper figure 1 fetch succeeds", {
                 reproduceFor='2015-05-27')
 });
 
-test_that("Fc Paper figure 2 fetch succeeds", {
+
+test_that("original Fc Paper figure 2 fetch succeeds", {
         africaJulyTemp <- fcGrid(variable="airt",
                                  latitudeFrom=-35, latitudeTo=35, latitudeBy=1,
                                  longitudeFrom=-20,longitudeTo=60,longitudeBy=1,
@@ -92,7 +94,9 @@ test_that("Fc Paper figure 2 fetch succeeds", {
                                  url='http://fetchclim.cloudapp.net/',
                                  reproduceFor='2015-05-27') 
 });
-test_that("Fc Paper figure 3a fetch succeeds", {
+
+
+test_that("original Fc Paper figure 3a fetch succeeds", {
         ts <- fcTimeSeriesYearly(
                 variable="airt",
                 latitude=8.0, longitude=10.0,
@@ -102,7 +106,8 @@ test_that("Fc Paper figure 3a fetch succeeds", {
                 dataSet="GHCNv2",
                 reproduceFor='2015-05-27')
 });
-test_that("Fc Paper figure 3b fetch succeeds", {
+
+test_that("original Fc Paper figure 3b fetch succeeds", {
         ts2 <- fcTimeSeriesYearly(
                 variable="airt",
                 latitude=8.0, longitude=10.0,
@@ -112,7 +117,7 @@ test_that("Fc Paper figure 3b fetch succeeds", {
                 dataSet ="NCEP/NCAR Reanalysis 1 (regular grid)",
                 reproduceFor='2015-05-27')    
 });
-test_that("Fc Paper figure 3c fetch succeeds", {
+test_that("original Fc Paper figure 3c fetch succeeds", {
         ts3 <- fcTimeSeriesYearly(
                 variable="airt",
                 latitude=8.0, longitude=10.0,
@@ -123,3 +128,56 @@ test_that("Fc Paper figure 3c fetch succeeds", {
                 reproduceFor='2015-05-27')
 });
 
+test_that("Fc Paper figure 1 fetch succeeds (random shifted)", {
+        ts <- fcTimeSeriesYearly(
+                variable="airt",
+                latitude=8.0+offset, longitude=10.0,
+                firstDay=152,lastDay=243,
+                firstYear=1950,lastYear=2050,
+                url='http://fetchclim.cloudapp.net/',
+                reproduceFor='2015-05-27')
+});
+
+
+test_that("Fc Paper figure 2 fetch succeeds (random shifted)", {
+        africaJulyTemp <- fcGrid(variable="airt",
+                                 latitudeFrom=-35+offset, latitudeTo=35+offset, latitudeBy=1,
+                                 longitudeFrom=-20,longitudeTo=60,longitudeBy=1,
+                                 firstDay=182,lastDay=212, #July
+                                 firstYear=1950,lastYear=2000,
+                                 url='http://fetchclim.cloudapp.net/',
+                                 reproduceFor='2015-05-27') 
+});
+
+
+test_that("Fc Paper figure 3a fetch succeeds (random shifted)", {
+        ts <- fcTimeSeriesYearly(
+                variable="airt",
+                latitude=8.0+offset, longitude=10.0,
+                firstDay=152,lastDay=243,
+                firstYear=1950,lastYear=2050,
+                url='http://fetchclim.cloudapp.net/',
+                dataSet="GHCNv2",
+                reproduceFor='2015-05-27')
+});
+
+test_that("Fc Paper figure 3b fetch succeeds (random shifted)", {
+        ts2 <- fcTimeSeriesYearly(
+                variable="airt",
+                latitude=8.0+offset, longitude=10.0,
+                firstDay=152,lastDay=243,
+                firstYear=1950,lastYear=2050,
+                url='http://fetchclim.cloudapp.net/',
+                dataSet ="NCEP/NCAR Reanalysis 1 (regular grid)",
+                reproduceFor='2015-05-27')    
+});
+test_that("Fc Paper figure 3c fetch succeeds (random shifted)", {
+        ts3 <- fcTimeSeriesYearly(
+                variable="airt",
+                latitude=8.0+offset, longitude=10.0,
+                firstDay=152,lastDay=243,
+                firstYear=1950,lastYear=2050,
+                url='http://fetchclim.cloudapp.net/',
+                dataSet ="CESM1-BGC airt",
+                reproduceFor='2015-05-27')
+});
