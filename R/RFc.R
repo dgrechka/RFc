@@ -269,7 +269,7 @@ internal_fc.fetchCore <- function(jsonRequest,url,requestProvenance) {
 #' 
 #' @name TimeSeries
 #' @param variable An identifier of the variable to fetch.
-#' To see the full list of supported variables navigate to the service url with the browser, explore the "What?" tab in the web application for .
+#' To see the full list of supported variables navigate to the service url with the browser, explore the "What?" tab in the web application for available variables list.
 #' @param latitude A numeric vector. Latitudes of the point set to fetch values for
 #' @param longitude A numeric vector. Longitudes of the point set to fetch values for
 #' @param firstYear A numeric scalar. Temporal coverage definition: The lower bound of years over which the averaging is performed
@@ -408,6 +408,8 @@ fcTimeSeriesHourly<-function(
 #' @param longitudeTo A numeric scalar. The upper longitudes bound of the spatial grid
 #' @param longitudeBy A numeric scalar. The step of the grid along longitudes.
 #' @inheritParams TimeSeries
+#' @return Type: SpatialPixelsDataFrame (from sp package)
+#' Contains a grid definition the following fields: values, sd, provenance
 #' 
 #' @examples
 #' #Fetching average potential evapotransiration for the upper part of Africa continent
