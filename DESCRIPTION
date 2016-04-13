@@ -1,12 +1,11 @@
 Package: RFc
 Type: Package
-Title: Client for FetchClimate WEB Service
+Title: Client for FetchClimate Web Service
 Version: 0.1-1
-Date: 2016-03-25
-Description: Extracts raw, averaged environmental data (such as
-   air temperature, precipitation rate, wind speed, etc.)
-   for the specified geo-locations and time bounds
-   from differenet data sets published at FetchClimate WEB service
+Date: 2016-04-13
+Description: Returns environmental data such as air temperature,
+        precipitation rate and wind speed from the FetchClimate Web service
+        based on user specified arguments such as geographical regions or coordinates and time bounds.
 Authors@R: c(person(first="Dmitry",
                 family="Grechka",
                 middle="A.",
@@ -32,6 +31,8 @@ Authors@R: c(person(first="Dmitry",
                 middle="W.",
                 role="ctb"))
 License: MIT
+URL: https://github.com/dgrechka/Rfc
+BugReports: https://github.com/dgrechka/Rfc/issues
 Suggests: testthat
 Depends:
     jsonlite,

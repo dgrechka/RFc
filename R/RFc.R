@@ -2,9 +2,9 @@
 
 #' RFc: R client for FetchClimate service
 #'
-#' Extracts raw, averaged environmental data (such as air
-#' temperature, precipitation rate, wind speed, etc.) published at FetchClimate WEB service
-#' for the specified geo-locations and time bounds from differenet data sets.
+#' Extracts raw, averaged environmental data (such as air temperature, precipitation rate, wind speed,
+#' etc.) published at the FetchClimate Web service for the specified geo-locations and time bounds from
+#' different data sets.
 #' 
 #' @section Time series fetching functions:
 #' fcTimeSeriesYearly, fcTimeSeriesDaily, fcTimeSeriesHourly
@@ -264,23 +264,23 @@ internal_fc.fetchCore <- function(jsonRequest,url,requestProvenance) {
 
 #' Fetches time series data for a set of locations
 #' 
-#' For a given set of geo-locations (lat - lon pairs) and given time interval fetches the time series data. Time series is formed by splitting the time interval either by years or by days or by hours
+#' For a given set of geo-locations (lat - lon pairs) and given time interval the time series is formed by splitting the time interval either by years or by days or by hours
 #' 
 #' 
 #' @name TimeSeries
 #' @param variable An identifier of the variable to fetch.
-#' To see the full list of supported variables navigate to the service url with the browser, explore the "What?" tab in the web application for available variables list.
+#' To see the full list of supported variables navigate to the service url with the browser (e.g. http://fc.itis.cs.msu.ru), explore the "What?" tab in the web application for available variables list.
 #' @param latitude A numeric vector. Latitudes of the point set to fetch values for
 #' @param longitude A numeric vector. Longitudes of the point set to fetch values for
 #' @param firstYear A numeric scalar. Temporal coverage definition: The lower bound of years over which the averaging is performed
 #' @param lastYear A numeric scalar. Temporal coverage definition: The upper bound of years over which the averaging is performed
-#' @param firstDay A numeric scalar. Temporal coverage definition: The lower bound of days interval within each year over which the averaging is performed
-#' @param lastDay A numeric scalar. Temporal coverage definition: The upper bound of days interval within each year over which the averaging is performed
-#' @param startHour A numeric scalar. Temporal coverage definition: The lower bound of days interval within each year over which the averaging is performed
-#' @param stopHour A numeric scalar. Temporal coverage definition: The upper bound of days interval within each year over which the averaging is performed
-#' @param url An URL of the service to query the data from
-#' @param dataSets A character vector. An identifier of the data set to fetch the data from. special value "ANY" enables data stitching from all available data sets.
-#' @param reproduceFor A character scalar. A string containing the time for which the result must correspond. The format is "YYYY-MM-DD". Special value "NOW" fetch the data using the latest FetchClimate configuration available.
+#' @param firstDay A numeric scalar. Temporal coverage definition: The lower bound of the days interval within each year over which the averaging is performed
+#' @param lastDay A numeric scalar. Temporal coverage definition: The upper bound of the days interval within each year over which the averaging is performed
+#' @param startHour A numeric scalar. Temporal coverage definition: The lower bound of the days interval within each year over which the averaging is performed
+#' @param stopHour A numeric scalar. Temporal coverage definition: The upper bound of the days interval within each year over which the averaging is performed
+#' @param url The URL of the service to query the data from
+#' @param dataSets A character vector. An identifier of the data set to fetch the data from. The special value "ANY" enables data stitching from all available data sets.
+#' @param reproduceFor A character scalar. A string containing the time for which the result must correspond. The format is "YYYY-MM-DD". The special value "NOW" fetch the data using the latest FetchClimate configuration available.
 #' @return A list. Contains the following entries: values, sd, provenance.
 #' Each of entries have the following dimensions (using values as an example):
 #' length(values) = point set count * time series length;
@@ -396,16 +396,16 @@ fcTimeSeriesHourly<-function(
         return(resultMatrix)
 }
 
-#' Fetches a gridded data
+#' Fetches gridded data
 #' @import httr
 #' @import jsonlite
 #' @import sp
 #' @export
-#' @param latitudeFrom A numeric scalar. The lower latitudes bound of the spatial grid
-#' @param latitudeTo A numeric scalar. The upper latitudes bound of the spatial grid
+#' @param latitudeFrom A numeric scalar. The lower latitude bound of the spatial grid
+#' @param latitudeTo A numeric scalar. The upper latitude bound of the spatial grid
 #' @param latitudeBy A numeric scalar. The step of the grid along latitudes
 #' @param longitudeFrom A numeric scalar. The lower longitude bound of the spatial grid
-#' @param longitudeTo A numeric scalar. The upper longitudes bound of the spatial grid
+#' @param longitudeTo A numeric scalar. The upper longitude bound of the spatial grid
 #' @param longitudeBy A numeric scalar. The step of the grid along longitudes.
 #' @inheritParams TimeSeries
 #' @return Type: SpatialPixelsDataFrame (from sp package)
