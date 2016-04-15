@@ -28,7 +28,7 @@ internal_fc.formRequestBody <- function(envVar, # must be private
                                         hours,
                                         spatialRegionType,dataSets,timestampStr) {
         ## JSON request object. 
-        ## The text may be downloaded from http://fetchclim.cloudapp.net/form
+        ## The text may be downloaded from http://fc.itis.cs.msu.ru/form
         
         timeRegion <- list(
                 Years=years,
@@ -311,7 +311,7 @@ fcTimeSeriesYearly<-function(
         firstYear,lastYear,
         firstDay=1,lastDay=365,
         startHour=0,stopHour=24,
-        url="http://fetchclim.cloudapp.net/",
+        url="http://fc.itis.cs.msu.ru/",
         dataSets="ANY",
         reproduceFor="NOW"
 ) {
@@ -343,7 +343,7 @@ fcTimeSeriesDaily<-function(
         firstDay=1,lastDay=365,
         firstYear=1961,lastYear=1990,
         startHour=0,stopHour=24,
-        url="http://fetchclim.cloudapp.net/",
+        url="http://fc.itis.cs.msu.ru/",
         dataSets="ANY",
         reproduceFor="NOW") {
         #envVar is string
@@ -375,7 +375,7 @@ fcTimeSeriesHourly<-function(
         startHour,stopHour,
         firstYear=1961,lastYear=1990,
         firstDay=1,lastDay=365,
-        url="http://fetchclim.cloudapp.net/",
+        url="http://fc.itis.cs.msu.ru/",
         dataSets="ANY",
         reproduceFor="NOW") {
         #envVar is string
@@ -429,7 +429,7 @@ fcGrid <- function(
         firstYear=1961,lastYear=1990,
         firstDay=1,lastDay=365,
         startHour=0,stopHour=24,
-        url="http://fetchclim.cloudapp.net/",
+        url="http://fc.itis.cs.msu.ru/",
         dataSets="ANY",
         reproduceFor="NOW") {
         

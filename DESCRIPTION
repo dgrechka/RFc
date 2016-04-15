@@ -31,8 +31,8 @@ Authors@R: c(person(first="Dmitry",
                 middle="W.",
                 role="ctb"))
 License: MIT
-URL: https://github.com/dgrechka/Rfc
-BugReports: https://github.com/dgrechka/Rfc/issues
+URL: https://github.com/dgrechka/RFc
+BugReports: https://github.com/dgrechka/RFc/issues
 Suggests: testthat
 Depends:
     jsonlite,
