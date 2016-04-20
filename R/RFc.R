@@ -3,7 +3,7 @@
 #' RFc: R client for FetchClimate service
 #'
 #' Extracts raw, averaged environmental data (such as air temperature, precipitation rate, wind speed,
-#' etc.) published at the FetchClimate Web service for the specified geo-locations and time bounds from
+#' etc.) published at the FetchClimate Web service (<http://fc.itis.cs.msu.ru/>) for the specified geo-locations and time bounds from
 #' different data sets.
 #' 
 #' @section Time series fetching functions:

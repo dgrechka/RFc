@@ -4,7 +4,7 @@ Title: Client for FetchClimate Web Service
 Version: 0.1-1
 Date: 2016-04-13
 Description: Returns environmental data such as air temperature,
-        precipitation rate and wind speed from the FetchClimate Web service
+        precipitation rate and wind speed from the FetchClimate Web service (<http://fc.itis.cs.msu.ru/>)
         based on user specified arguments such as geographical regions or coordinates and time bounds.
 Authors@R: c(person(first="Dmitry",
                 family="Grechka",
