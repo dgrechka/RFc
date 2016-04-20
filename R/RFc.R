@@ -288,7 +288,8 @@ internal_fc.fetchCore <- function(jsonRequest,url,requestProvenance) {
 #' ncol(values) = time series length;
 
 #' @examples
-#' #Fetching a whole year average time series (varing year one by one starting from 1950 till 2000 inclusevly)
+#' #Fetching a whole year average time series
+#' #(varing year one by one starting from 1950 till 2000 inclusevly)
 #' #for a single geo point
 #' fcTimeSeriesYearly(variable="airt",latitude=75.5, longitude=57.7,firstYear=1950,lastYear=2000)
 #'
