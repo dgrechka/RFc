@@ -19,12 +19,12 @@ test_that("fcTimeSeriesDaily timeseries correct length for single point", {
 })
 
 test_that("fcTimeSeriesHourly timeseries correct length for single point.", {
-        a<-fcTimeSeriesHourly(variable="airt",latitude=75.1+offset, longitude=57.7,firstYear=1950,lastYear=2000,startHour=0,stopHour=24)
+        a<-fcTimeSeriesHourly(variable="airt",latitude=75.1+offset, longitude=57.7,firstYear=1950,lastYear=2000,startHour=0,stopHour=23)
         expect_equal(ncol(a$values), 24,label=paste("wrong time series length. expected 24 but got",ncol(a$values)))
 })
 
 test_that("fcTimeSeriesHourly timeseries correct length for single point. timestamp set", {
-        a<-fcTimeSeriesHourly(variable="airt",latitude=75.1+offset, longitude=57.7,firstYear=1950,lastYear=2000,startHour=0,stopHour=24,reproduceFor="2015-10-01")
+        a<-fcTimeSeriesHourly(variable="airt",latitude=75.1+offset, longitude=57.7,firstYear=1950,lastYear=2000,startHour=0,stopHour=23,reproduceFor="2015-10-01")
         expect_equal(ncol(a$values), 24,label=paste("wrong time series length. expected 24 but got",ncol(a$values)))
 })
 
