@@ -297,7 +297,7 @@ internal_fc.fetchCore <- function(jsonRequest,url,requestProvenance) {
 #' fcTimeSeriesHourly(variable="airt",latitude=55.5, longitude=37.3,
 #'      firstDay=183,lastDay=213,
 #'      firstYear=2008,lastYear=2008,
-#'      startHour=0,stopHour=24)
+#'      startHour=0,stopHour=23)
 #' 
 NULL
 
@@ -311,7 +311,7 @@ fcTimeSeriesYearly<-function(
         latitude,longitude,
         firstYear,lastYear,
         firstDay=1,lastDay=365,
-        startHour=0,stopHour=24,
+        startHour=0,stopHour=23,
         url="http://fc.itis.cs.msu.ru/",
         dataSets="ANY",
         reproduceFor="NOW"
@@ -324,7 +324,7 @@ fcTimeSeriesYearly<-function(
         
         years <- seq(from=firstYear,to=lastYear+1,by=1)
         days <- c(firstDay,lastDay+1)
-        hours <- c(startHour,stopHour)
+        hours <- c(startHour,stopHour+1)
         
         resultMatrix <-internal_fc.TimeSeries(variable,latitude,longitude,years,days,hours,url,dataSets,reproduceFor)
         
@@ -343,7 +343,7 @@ fcTimeSeriesDaily<-function(
         latitude,longitude,
         firstDay=1,lastDay=365,
         firstYear=1961,lastYear=1990,
-        startHour=0,stopHour=24,
+        startHour=0,stopHour=23,
         url="http://fc.itis.cs.msu.ru/",
         dataSets="ANY",
         reproduceFor="NOW") {
@@ -356,7 +356,7 @@ fcTimeSeriesDaily<-function(
         
         years <- c(firstYear,lastYear+1)
         days <- seq(from=firstDay,to=lastDay+1,by=1)
-        hours <- c(startHour,stopHour)
+        hours <- c(startHour,stopHour+1)
         
         resultMatrix <-internal_fc.TimeSeries(variable,latitude,longitude,years,days,hours,url,dataSets,reproduceFor)
         
