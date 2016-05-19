@@ -2,7 +2,7 @@
 
 ### R package for FetchClimate Web service
 
-[![Build Status](https://travis-ci.org/dgrechka/RFc.svg?branch=package)](https://travis-ci.org/dgrechka/RFc)
+[![Build Status](https://travis-ci.org/dgrechka/Rfc.svg?branch=package)](https://travis-ci.org/dgrechka/Rfc)
 [![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/RFc)](http://cran.r-project.org/web/packages/RFc)
 
 Currently active FetchClimate instance is available for your experiments at [fc.itis.cs.msu.ru](http://fc.itis.cs.msu.ru)
