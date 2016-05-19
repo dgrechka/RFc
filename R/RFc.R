@@ -276,8 +276,8 @@ internal_fc.fetchCore <- function(jsonRequest,url,requestProvenance) {
 #' @param lastYear A numeric scalar. Temporal coverage definition: The upper bound of years over which the averaging is performed
 #' @param firstDay A numeric scalar. Temporal coverage definition: The lower bound of the days interval within each year over which the averaging is performed
 #' @param lastDay A numeric scalar. Temporal coverage definition: The upper bound of the days interval within each year over which the averaging is performed
-#' @param startHour A numeric scalar. Temporal coverage definition: The lower bound of the days interval within each year over which the averaging is performed
-#' @param stopHour A numeric scalar. Temporal coverage definition: The upper bound of the days interval within each year over which the averaging is performed
+#' @param startHour A numeric scalar. Temporal coverage definition: The lower bound of the hours interval within each day over which the averaging is performed
+#' @param stopHour A numeric scalar. Temporal coverage definition: The upper bound of the hours interval within each day over which the averaging is performed
 #' @param url The URL of the service to query the data from
 #' @param dataSets A character vector. An identifier of the data set to fetch the data from. The special value "ANY" enables data stitching from all available data sets.
 #' @param reproduceFor A character scalar. A string containing the time for which the result must correspond. The format is "YYYY-MM-DD". The special value "NOW" fetch the data using the latest FetchClimate configuration available.
