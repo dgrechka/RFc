@@ -21,12 +21,13 @@ require(jsonlite)
 require(sp)
 require(httr)
 
-internal_fc.formRequestBody <- function(envVar, # must be private
+internal_fc.formRequestBody <- function(envVar,
                                         lat,lon,
                                         years,
                                         days,
                                         hours,
-                                        spatialRegionType,dataSets,timestampStr) {
+                                        spatialRegionType,dataSets,timestampStr,
+                                        verbose) {
         ## JSON request object. 
         ## The text may be downloaded from http://fc.itis.cs.msu.ru/form
         
@@ -83,7 +84,11 @@ internal_fc.formRequestBody <- function(envVar, # must be private
                 ReproducibilityTimestamp=unbox(timestamp)
         )
         j <- toJSON(request,digits=20, pretty=TRUE)
-        #print(j)
+        if(verbose) {
+                print("request JSON:");
+                print(j)        
+        }
+        
         return(j)
 }
 
@@ -187,7 +192,7 @@ internal_fc.TimeSeries <-function(envVar, #must be private
                                   years,
                                   days,
                                   hours,
-                                  url,dataSets,timestampStr) {
+                                  url,dataSets,timestampStr,verbose) {
         N <- length(lat)
         if(length(lon) != N) {
                 stop("lon and lat must be the same length");
@@ -199,10 +204,11 @@ internal_fc.TimeSeries <-function(envVar, #must be private
                                             hours,
                                             spatialRegionType="Points",
                                             dataSets=dataSets,
-                                            timestampStr=timestampStr);
+                                            timestampStr=timestampStr,
+                                            verbose=verbose);
         requestProvenance <- length(dataSets)>1 || dataSets=="ANY"  
         
-        result <- internal_fc.fetchCore(json,url,requestProvenance)    
+        result <- internal_fc.fetchCore(json,url,requestProvenance,verbose)    
         conf <- internal_fc.getConfiguration(url,timestampStr)
         explicitDs <- c()
         if(requestProvenance){
@@ -217,12 +223,14 @@ internal_fc.TimeSeries <-function(envVar, #must be private
         return(resultMatrix)
 }
 
-internal_fc.fetchCore <- function(jsonRequest,url,requestProvenance) {
+internal_fc.fetchCore <- function(jsonRequest,url,requestProvenance,verbose) {
         #print("requesting JSON")
         #print(jsonRequest)
         replyRaw <- POST(url,path="/api/compute",accept("text/plain"),content_type("application/json"),body=jsonRequest)
         reply<-content(replyRaw)
-        print(reply)
+        if(verbose) {
+                print(reply)
+        }        
         
         ## wait while processing in progress
         while (substr(reply,1,7)=='pending' || substr(reply,1,8)=='progress') {
@@ -231,15 +239,20 @@ internal_fc.fetchCore <- function(jsonRequest,url,requestProvenance) {
                 replyRaw <- GET(url,
                                 path="/api/status",
                                 query=list(hash=hash),
+                                content_type("application/json"),
                                 accept("text/plain")) 
                 reply = content(replyRaw)
-                print(reply)
+                if(verbose) {
+                        print(reply)
+                }
         }
         
         result <- c()
         
         ## get result data
-        print("Receiving data...")
+        if(verbose) {
+                print("Receiving data...")
+        }
         if (substr(reply,1,9)=='completed') {
                 msds = substr(reply,11,nchar(reply))    
                 vars_to_fetch <- c()
@@ -281,6 +294,7 @@ internal_fc.fetchCore <- function(jsonRequest,url,requestProvenance) {
 #' @param url The URL of the service to query the data from
 #' @param dataSets A character vector. An identifier of the data set to fetch the data from. The special value "ANY" enables data stitching from all available data sets.
 #' @param reproduceFor A character scalar. A string containing the time for which the result must correspond. The format is "YYYY-MM-DD". The special value "NOW" fetch the data using the latest FetchClimate configuration available.
+#' @param verbose A logical scalar. If set to TRUE the method outputs its actions verbosely
 #' @return A list. Contains the following entries: values, sd, provenance.
 #' Each of entries have the following dimensions (using values as an example):
 #' length(values) = point set count * time series length;
@@ -297,7 +311,7 @@ internal_fc.fetchCore <- function(jsonRequest,url,requestProvenance) {
 #' fcTimeSeriesHourly(variable="airt",latitude=55.5, longitude=37.3,
 #'      firstDay=183,lastDay=213,
 #'      firstYear=2008,lastYear=2008,
-#'      startHour=0,stopHour=23)
+#'      startHour=0,stopHour=24)
 #' 
 NULL
 
@@ -314,7 +328,8 @@ fcTimeSeriesYearly<-function(
         startHour=0,stopHour=23,
         url="http://fc.itis.cs.msu.ru/",
         dataSets="ANY",
-        reproduceFor="NOW"
+        reproduceFor="NOW",
+        verbose=F
 ) {
         #envVar is string
         #lat,lon are vectors with the same length (can be length of 1).
@@ -326,7 +341,7 @@ fcTimeSeriesYearly<-function(
         days <- c(firstDay,lastDay+1)
         hours <- c(startHour,stopHour+1)
         
-        resultMatrix <-internal_fc.TimeSeries(variable,latitude,longitude,years,days,hours,url,dataSets,reproduceFor)
+        resultMatrix <-internal_fc.TimeSeries(variable,latitude,longitude,years,days,hours,url,dataSets,reproduceFor,verbose)
         
         resultMatrix$years <- years[1:(length(years)-1)]
         
@@ -346,7 +361,9 @@ fcTimeSeriesDaily<-function(
         startHour=0,stopHour=23,
         url="http://fc.itis.cs.msu.ru/",
         dataSets="ANY",
-        reproduceFor="NOW") {
+        reproduceFor="NOW",
+        verbose=F
+        ) {
         #envVar is string
         #lat,lon are vectors with the same length (can be length of 1).  
         #firstDay,lastDay are scalars
@@ -358,7 +375,7 @@ fcTimeSeriesDaily<-function(
         days <- seq(from=firstDay,to=lastDay+1,by=1)
         hours <- c(startHour,stopHour+1)
         
-        resultMatrix <-internal_fc.TimeSeries(variable,latitude,longitude,years,days,hours,url,dataSets,reproduceFor)
+        resultMatrix <-internal_fc.TimeSeries(variable,latitude,longitude,years,days,hours,url,dataSets,reproduceFor,verbose)
         
         resultMatrix$days <- days[1:(length(days)-1)]
         
@@ -378,7 +395,8 @@ fcTimeSeriesHourly<-function(
         firstDay=1,lastDay=365,
         url="http://fc.itis.cs.msu.ru/",
         dataSets="ANY",
-        reproduceFor="NOW") {
+        reproduceFor="NOW",
+        verbose=F) {
         #envVar is string
         #lat,lon are vectors with the same length (can be length of 1).
         #startHour,stopHour are scalars
@@ -390,7 +408,7 @@ fcTimeSeriesHourly<-function(
         days <- c(firstDay,lastDay+1)
         hours <- seq(from=startHour,to=stopHour+1, by = 1)
         
-        resultMatrix <-internal_fc.TimeSeries(variable,latitude,longitude,years,days,hours,url,dataSets,reproduceFor)
+        resultMatrix <-internal_fc.TimeSeries(variable,latitude,longitude,years,days,hours,url,dataSets,reproduceFor,verbose)
         
         resultMatrix$hours <- hours[1:(length(hours)-1)]
         
@@ -408,6 +426,7 @@ fcTimeSeriesHourly<-function(
 #' @param longitudeFrom A numeric scalar. The lower longitude bound of the spatial grid
 #' @param longitudeTo A numeric scalar. The upper longitude bound of the spatial grid
 #' @param longitudeBy A numeric scalar. The step of the grid along longitudes.
+#' @param verbose A logical scalar. If set to TRUE the method outputs its actions verbosely
 #' @inheritParams TimeSeries
 #' @return Type: SpatialPixelsDataFrame (from sp package)
 #' Contains a grid definition the following fields: values, sd, provenance
@@ -432,7 +451,8 @@ fcGrid <- function(
         startHour=0,stopHour=24,
         url="http://fc.itis.cs.msu.ru/",
         dataSets="ANY",
-        reproduceFor="NOW") {
+        reproduceFor="NOW",
+        verbose=F) {
         
         lats <- seq(from=latitudeFrom,to=latitudeTo,by=latitudeBy)
         lons <- seq(from=longitudeFrom,to=longitudeTo,by=longitudeBy)
@@ -444,9 +464,9 @@ fcGrid <- function(
         requestBody <- internal_fc.formRequestBody(variable,
                                                    lats,lons,
                                                    years,days,hours,
-                                                   "PointGrid",dataSets,reproduceFor)
+                                                   "PointGrid",dataSets,reproduceFor,verbose)
         requestProvenance <- length(dataSets)>1 || dataSets=="ANY"  
-        response <- internal_fc.fetchCore(requestBody,url,requestProvenance)
+        response <- internal_fc.fetchCore(requestBody,url,requestProvenance,verbose)
         conf <- internal_fc.getConfiguration(url,reproduceFor)
         explicitDs <- c()
         if(requestProvenance){
