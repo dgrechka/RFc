@@ -388,11 +388,11 @@ fcTimeSeriesHourly<-function(
         
         years <- c(firstYear,lastYear+1)
         days <- c(firstDay,lastDay+1)
-        hours <- seq(from=startHour,to=stopHour)
+        hours <- seq(from=startHour,to=stopHour+1, by = 1)
         
         resultMatrix <-internal_fc.TimeSeries(variable,latitude,longitude,years,days,hours,url,dataSets,reproduceFor)
         
-        resultMatrix$hours <- hours[1:(length(hours))]
+        resultMatrix$hours <- hours[1:(length(hours)-1)]
         
         return(resultMatrix)
 }
