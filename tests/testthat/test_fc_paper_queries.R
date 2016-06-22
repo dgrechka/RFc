@@ -27,7 +27,6 @@ test_that("original Fc Paper figure 2 fetch succeeds", {
         expect_equal(lonCells, 81)
 });
 
-
 test_that("original Fc Paper figure 3a fetch succeeds", {
         ts <- fcTimeSeriesYearly(
                 variable="airt",
@@ -69,8 +68,7 @@ test_that("Fc Paper figure 1 fetch succeeds (random shifted)", {
                 firstDay=152,lastDay=243,
                 firstYear=1950,lastYear=2050,
                 url = serviceURLtoTest,
-                verbose=isVerbose,
-                reproduceFor='2015-05-27')
+                verbose=isVerbose)
         expect_equal(length(ts$values),101)
 });
 
@@ -82,27 +80,25 @@ test_that("Fc Paper figure 2 fetch succeeds (random shifted)", {
                                  firstDay=182,lastDay=212, #July
                                  firstYear=1950,lastYear=2000,
                                  url = serviceURLtoTest,
-                                 verbose=isVerbose,
-                                 reproduceFor='2015-05-27')
+                                 verbose=isVerbose)
         lonCells <- gridparameters(africaJulyTemp)["cells.dim"][rownames(gridparameters(africaJulyTemp)["cells.dim"])=='lon',]
         latCells <- gridparameters(africaJulyTemp)["cells.dim"][rownames(gridparameters(africaJulyTemp)["cells.dim"])=='lat',]
         expect_equal(latCells, 71)
         expect_equal(lonCells, 81)
 });
 
-
-test_that("Fc Paper figure 3a fetch succeeds (random shifted)", {
-        ts <- fcTimeSeriesYearly(
-                variable="airt",
-                latitude=8.0+offset, longitude=10.0,
-                firstDay=152,lastDay=243,
-                firstYear=1950,lastYear=2050,
-                url = serviceURLtoTest,
-                verbose=isVerbose,
-                dataSet="GHCNv2",
-                reproduceFor='2015-05-27')
-        expect_equal(length(ts$values),101)
-});
+#TEMPORARY DISABLES UNTIL GHCNv2 REENABLED
+#test_that("Fc Paper figure 3a fetch succeeds (random shifted)", {
+#        ts <- fcTimeSeriesYearly(
+#                variable="airt",
+#                latitude=8.0+offset, longitude=10.0,
+#                firstDay=152,lastDay=243,
+#                firstYear=1950,lastYear=2050,
+#                url = serviceURLtoTest,
+#                verbose=isVerbose,
+#                dataSet="GHCNv2")
+#        expect_equal(length(ts$values),101)
+#});
 
 test_that("Fc Paper figure 3b fetch succeeds (random shifted)", {
         ts2 <- fcTimeSeriesYearly(
@@ -112,8 +108,7 @@ test_that("Fc Paper figure 3b fetch succeeds (random shifted)", {
                 firstYear=1950,lastYear=2050,
                 url = serviceURLtoTest,
                 verbose=isVerbose,
-                dataSet ="NCEP/NCAR Reanalysis 1 (regular grid)",
-                reproduceFor='2015-05-27')
+                dataSet ="NCEP/NCAR Reanalysis 1 (regular grid)")
         expect_equal(length(ts2$values),101)
 });
 test_that("Fc Paper figure 3c fetch succeeds (random shifted)", {
@@ -124,7 +119,6 @@ test_that("Fc Paper figure 3c fetch succeeds (random shifted)", {
                 firstYear=1950,lastYear=2050,
                 url = serviceURLtoTest,
                 verbose=isVerbose,
-                dataSet ="CESM1-BGC airt",
-                reproduceFor='2015-05-27')
+                dataSet ="CESM1-BGC airt")
         expect_equal(length(ts3$values),101)
 })
