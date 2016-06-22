@@ -3,7 +3,7 @@
 #' RFc: R client for FetchClimate service
 #'
 #' Extracts raw, averaged environmental data (such as air temperature, precipitation rate, wind speed,
-#' etc.) published at the FetchClimate Web service (<http://fc.itis.cs.msu.ru/>) for the specified geo-locations and time bounds from
+#' etc.) published at the FetchClimate Web service (<http://fetchclimate.org/>) for the specified geo-locations and time bounds from
 #' different data sets.
 #' 
 #' @section Time series fetching functions:
@@ -11,15 +11,80 @@
 #'
 #' @section Gridded data fetching functions:
 #' fcGrid
+#' 
+#' @section Listing available data functions:
+#' fcDataSets fcVariables
 #'
 #' @docType package
 #' @name RFc
 #' 
 NULL
 
+
+#' Availabe data
+#' 
+#' The default instance of FetchClimate at <http://fetchclimate2.cloudapp.net/> provides the following data
+#' 
+#' \strong{Environmental variables:}\cr
+#' "abshum" : Absolute air humidity (g/m^3)\cr
+#' "airt" : Air temperature near surface (Degrees C)\cr
+#' "airt_land": Air temperature near surface. Land only areas (Degrees C)\cr
+#' "airt_ocean" : Air temperature near surface. Ocean only areas (Degrees C)\cr
+#' "depth_ocean" : Depth below sea level. Ocean only areas (meters)\cr
+#' "dtr" : Diurnal air temperature rate (Degrees C)\cr
+#' "elev" : Elevation above sea level (meters)\cr
+#' "elev_land" : Elevation above sea level. Land only a areas (meters)\cr
+#' "frs" : Frost days frequency (days/month)\cr
+#' "pet": Potential evapotranspiration (mm/month)\cr
+#' "prate" : Precipitation rate ()\cr
+#' "relhum" : Relative humidity (percentage)\cr
+#' "relhum_land" : Relative humidity. Land only area (percentage)\cr
+#' "soilmoist" : Soil moisture (mm/m)\cr
+#' "sunp" : Sunshine fraction (Percent of maximum possible sunshine)\cr
+#' "wet" : Wet days frequency (days/month)\cr
+#' "windspeed" : Wind speed at 10m (m/s)\cr
+#' "wvp" : Water vapour pressure (hPa)\cr
+#' "wvsp" : Water vapour saturation pressure (hPa)\cr
+#' 
+#' \strong{DataSets [supported variables]:}\cr
+#' "CESM1-BGC airt" [airt]\cr
+#' "CESM1-BGC prate" [prate]\cr
+#' "CpcSoilMoisture" [soilmoist]\cr
+#' "CRU CL 2.0" [airt, airt_land, dtr, frs, prate, relhum, relhum_land, sunp, wet, windspeed]\cr
+#' "ETOPO1" [elev]\cr
+#' "FC1 Variables" [airt_land, airt_ocean, depth_ocean, relhum_land]\cr
+#' "GTOPO30" [elev, elev_land]\cr
+#' "Malmstrom PET" [pet]\cr
+#' "NCEP/NCAR Reanalysis 1 (Gauss T62)" [prate]\cr
+#' "NCEP/NCAR Reanalysis 1 (regular grid)" [airt]\cr
+#' "WagnerWVSP" [abshum, wvp, wvsp]\cr
+#' "WorldClim 1.4" [airt, airt_land, prate]\cr
+#' 
+#' Note that availavle variables as well as datasets are subject to change in time
+#' The list above describes the most recent configuration
+#' However specifing timestamp parameter other than "Now" may lead to different set of available data
+#' Verify the actual list using `fcVariables()` and `fcDataSets()` functions
+#' 
+#' @name Availabe data
+
+NULL
+
+#' Release notes
+#' 
+#' \strong{release 0.1-2}\cr
+#' Support for obtaining available datasets and varaibles with\cr
+#'      fcDataSets()\cr
+#'      fcVaraibles()\cr
+#'      \cr
+#' \strong{release 0.1-1}\cr
+#' Support for fetching simple time series and grids
+#' 
+#' @name Release notes
+
 require(jsonlite)
 require(sp)
 require(httr)
+
 
 internal_fc.formRequestBody <- function(envVar,
                                         lat,lon,
@@ -29,7 +94,7 @@ internal_fc.formRequestBody <- function(envVar,
                                         spatialRegionType,dataSets,timestampStr,
                                         verbose) {
         ## JSON request object. 
-        ## The text may be downloaded from http://fc.itis.cs.msu.ru/form
+        ## The text may be downloaded from http://fetchclimate2.cloudapp.net/form
         
         timeRegion <- list(
                 Years=years,
@@ -274,6 +339,81 @@ internal_fc.fetchCore <- function(jsonRequest,url,requestProvenance,verbose) {
         return(result);
 }
 
+#' Fetches information about available datasets
+#' @import httr
+#' @import jsonlite
+#' @import sp
+#' @export
+#' @param url The URL of the service to get the information about
+#' @param timestamp A character scalar. A string containing the time for which the result must correspond. The format is "YYYY-MM-DD". The special value "NOW" fetch the data using the latest FetchClimate configuration available.
+#' @return Type: list\cr
+#' Contains a descriptions of the datasets available to fetch the data from
+#' 
+#' @examples
+#' #Getting currently available datasets
+#' 
+#' fcDataSets()
+#' 
+#' #Getting datasets available on 1 June 2016
+#' 
+#' fcDataSets(timestamp='2016-06-01')
+#' 
+#' #Listing varaibles that are avaialable from "CRU CL 2.0" dataset
+#' 
+#' fcDataSets(timestamp='2016-06-01')$`CRU CL 2.0`$Variables
+#' 
+fcDataSets <- function(url='http://fetchclimate2.cloudapp.net/',timestamp="NOW") {
+        configuration <- internal_fc.getConfiguration(url,timestamp)
+        result <- list()
+        for(i in 1:length(configuration$DataSources)) {
+                currentDs <- configuration$DataSources[[i]]
+                dataset <- list(
+                        Name=currentDs$Name,
+                        Description=currentDs$Description,
+                        Copyright=currentDs$Copyright,
+                        Variables=as.character(currentDs$ProvidedVariables))
+                
+                result[[currentDs$Name]] <- dataset
+        }
+        return(result)
+}
+
+#' Fetches information about available variables
+#' @import httr
+#' @import jsonlite
+#' @import sp
+#' @inheritParams fcDataSets
+#' @export
+#' @return Type: list\cr
+#' Contains a descriptions of the variables available for fetching
+#' 
+#' @examples
+#' #Getting currently available variables
+#' 
+#' fcVariables()
+#' 
+#' #Getting variables available on 1 June 2016
+#' 
+#' fcVariables(timestamp='2016-06-01')
+#' 
+#' #Obtaining units of "prate" variable
+#' 
+#' fcVariables(timestamp='2016-06-01')$`prate`$Units
+#' 
+fcVariables <- function(url='http://fetchclimate2.cloudapp.net/',timestamp="NOW") {
+        configuration <- internal_fc.getConfiguration(url,timestamp)
+        result <- list()
+        for(i in 1:length(configuration$EnvironmentalVariables)) {
+                currentVar <- configuration$EnvironmentalVariables[[i]]
+                v <- list(
+                        Name=currentVar$Name,
+                        Description=currentVar$Description,
+                        Units=currentVar$Units)
+                
+                result[[currentVar$Name]] <- v
+        }
+        return(result)
+}
 
 #' Fetches time series data for a set of locations
 #' 
@@ -281,8 +421,8 @@ internal_fc.fetchCore <- function(jsonRequest,url,requestProvenance,verbose) {
 #' 
 #' 
 #' @name TimeSeries
-#' @param variable An identifier of the variable to fetch.
-#' To see the full list of supported variables navigate to the service url with the browser (e.g. http://fc.itis.cs.msu.ru), explore the "What?" tab in the web application for available variables list.
+#' @param variable An identifier of the variable to fetch. \cr
+#' To get the list of available variables use `fcVariables()` function or see "Available data" section of documentaion
 #' @param latitude A numeric vector. Latitudes of the point set to fetch values for
 #' @param longitude A numeric vector. Longitudes of the point set to fetch values for
 #' @param firstYear A numeric scalar. Temporal coverage definition: The lower bound of years over which the averaging is performed
@@ -311,7 +451,7 @@ internal_fc.fetchCore <- function(jsonRequest,url,requestProvenance,verbose) {
 #' fcTimeSeriesHourly(variable="airt",latitude=55.5, longitude=37.3,
 #'      firstDay=183,lastDay=213,
 #'      firstYear=2008,lastYear=2008,
-#'      startHour=0,stopHour=24)
+#'      startHour=0,stopHour=23)
 #' 
 NULL
 
@@ -326,7 +466,7 @@ fcTimeSeriesYearly<-function(
         firstYear,lastYear,
         firstDay=1,lastDay=365,
         startHour=0,stopHour=23,
-        url="http://fc.itis.cs.msu.ru/",
+        url="http://fetchclimate2.cloudapp.net/",
         dataSets="ANY",
         reproduceFor="NOW",
         verbose=F
@@ -359,7 +499,7 @@ fcTimeSeriesDaily<-function(
         firstDay=1,lastDay=365,
         firstYear=1961,lastYear=1990,
         startHour=0,stopHour=23,
-        url="http://fc.itis.cs.msu.ru/",
+        url="http://fetchclimate2.cloudapp.net/",
         dataSets="ANY",
         reproduceFor="NOW",
         verbose=F
@@ -393,7 +533,7 @@ fcTimeSeriesHourly<-function(
         startHour,stopHour,
         firstYear=1961,lastYear=1990,
         firstDay=1,lastDay=365,
-        url="http://fc.itis.cs.msu.ru/",
+        url="http://fetchclimate2.cloudapp.net/",
         dataSets="ANY",
         reproduceFor="NOW",
         verbose=F) {
@@ -449,7 +589,7 @@ fcGrid <- function(
         firstYear=1961,lastYear=1990,
         firstDay=1,lastDay=365,
         startHour=0,stopHour=24,
-        url="http://fc.itis.cs.msu.ru/",
+        url="http://fetchclimate2.cloudapp.net/",
         dataSets="ANY",
         reproduceFor="NOW",
         verbose=F) {
