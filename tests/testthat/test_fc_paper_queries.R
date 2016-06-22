@@ -10,6 +10,7 @@ test_that("original Fc Paper figure 1 fetch succeeds", {
                 firstDay=152,lastDay=243,
                 firstYear=1950,lastYear=2050,
                 reproduceFor='2015-05-27')
+        expect_equal(length(ts$values),101)
 });
 
 
@@ -18,8 +19,12 @@ test_that("original Fc Paper figure 2 fetch succeeds", {
                                  latitudeFrom=-35, latitudeTo=35, latitudeBy=1,
                                  longitudeFrom=-20,longitudeTo=60,longitudeBy=1,
                                  firstDay=182,lastDay=212, #July
-                                 firstYear=1950,lastYear=2000,,
+                                 firstYear=1950,lastYear=2000,
                                  reproduceFor='2015-05-27') 
+        lonCells <- gridparameters(africaJulyTemp)["cells.dim"][rownames(gridparameters(africaJulyTemp)["cells.dim"])=='lon',]
+        latCells <- gridparameters(africaJulyTemp)["cells.dim"][rownames(gridparameters(africaJulyTemp)["cells.dim"])=='lat',]
+        expect_equal(latCells, 71)
+        expect_equal(lonCells, 81)
 });
 
 
@@ -31,6 +36,7 @@ test_that("original Fc Paper figure 3a fetch succeeds", {
                 firstYear=1950,lastYear=2050,
                 dataSet="GHCNv2",
                 reproduceFor='2015-05-27')
+        expect_equal(length(ts$values),101)
 });
 
 test_that("original Fc Paper figure 3b fetch succeeds", {
@@ -40,7 +46,8 @@ test_that("original Fc Paper figure 3b fetch succeeds", {
                 firstDay=152,lastDay=243,
                 firstYear=1950,lastYear=2050,
                 dataSet ="NCEP/NCAR Reanalysis 1 (regular grid)",
-                reproduceFor='2015-05-27')    
+                reproduceFor='2015-05-27')
+        expect_equal(length(ts2$values),101)
 });
 test_that("original Fc Paper figure 3c fetch succeeds", {
         ts3 <- fcTimeSeriesYearly(
@@ -50,6 +57,7 @@ test_that("original Fc Paper figure 3c fetch succeeds", {
                 firstYear=1950,lastYear=2050,
                 dataSet ="CESM1-BGC airt",
                 reproduceFor='2015-05-27')
+        expect_equal(length(ts3$values),101)
 });
 
 context("Fetches similar to mentioned in Ecography paper")
@@ -63,6 +71,7 @@ test_that("Fc Paper figure 1 fetch succeeds (random shifted)", {
                 url = serviceURLtoTest,
                 verbose=isVerbose,
                 reproduceFor='2015-05-27')
+        expect_equal(length(ts$values),101)
 });
 
 
@@ -74,7 +83,11 @@ test_that("Fc Paper figure 2 fetch succeeds (random shifted)", {
                                  firstYear=1950,lastYear=2000,
                                  url = serviceURLtoTest,
                                  verbose=isVerbose,
-                                 reproduceFor='2015-05-27') 
+                                 reproduceFor='2015-05-27')
+        lonCells <- gridparameters(africaJulyTemp)["cells.dim"][rownames(gridparameters(africaJulyTemp)["cells.dim"])=='lon',]
+        latCells <- gridparameters(africaJulyTemp)["cells.dim"][rownames(gridparameters(africaJulyTemp)["cells.dim"])=='lat',]
+        expect_equal(latCells, 71)
+        expect_equal(lonCells, 81)
 });
 
 
@@ -88,6 +101,7 @@ test_that("Fc Paper figure 3a fetch succeeds (random shifted)", {
                 verbose=isVerbose,
                 dataSet="GHCNv2",
                 reproduceFor='2015-05-27')
+        expect_equal(length(ts$values),101)
 });
 
 test_that("Fc Paper figure 3b fetch succeeds (random shifted)", {
@@ -99,7 +113,8 @@ test_that("Fc Paper figure 3b fetch succeeds (random shifted)", {
                 url = serviceURLtoTest,
                 verbose=isVerbose,
                 dataSet ="NCEP/NCAR Reanalysis 1 (regular grid)",
-                reproduceFor='2015-05-27')    
+                reproduceFor='2015-05-27')
+        expect_equal(length(ts2$values),101)
 });
 test_that("Fc Paper figure 3c fetch succeeds (random shifted)", {
         ts3 <- fcTimeSeriesYearly(
@@ -111,4 +126,5 @@ test_that("Fc Paper figure 3c fetch succeeds (random shifted)", {
                 verbose=isVerbose,
                 dataSet ="CESM1-BGC airt",
                 reproduceFor='2015-05-27')
+        expect_equal(length(ts3$values),101)
 })

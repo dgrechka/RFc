@@ -11,7 +11,7 @@ seed <- as.numeric(as.POSIXct(Sys.Date())) #random seed is changed every day
 serviceURLtoTest <- "http://fetchclimate2.cloudapp.net/"
 
 
-isVerbose <- T
+isVerbose <- F
 
 
 set.seed(seed)
@@ -21,4 +21,4 @@ print(paste0("Random seed is ",seed,"; Cache braking offset is ",offset));
 
 
 
-test_dir("testthat/",reporter = 'minimal')
+test_dir("testthat/")
