@@ -299,7 +299,7 @@ internal_fc.fetchCore <- function(jsonRequest,url,requestProvenance,verbose) {
         
         ## wait while processing in progress
         while (substr(reply,1,7)=='pending' || substr(reply,1,8)=='progress') {
-                Sys.sleep(1)
+                Sys.sleep(5)
                 hash=strsplit(reply,"hash=")[[1]][2]    
                 replyRaw <- GET(url,
                                 path="/api/status",
